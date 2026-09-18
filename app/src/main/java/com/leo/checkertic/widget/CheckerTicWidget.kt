@@ -137,7 +137,9 @@ private fun WidgetContent(
         Column(
             modifier = GlanceModifier
                 .fillMaxHeight()
-                .width(42.dp),
+                .width(44.dp)
+                .background(ImageProvider(R.drawable.bg_widget_sidebar))
+                .padding(vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Tasks tab button
