@@ -2,6 +2,7 @@ package com.leo.checkertic
 
 import android.content.Context
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -20,10 +21,16 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
+    private var initialTabState by mutableStateOf<String?>(null)
+    private var openNoteIdState by mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         initWorkManager()
+
+        initialTabState = intent.getStringExtra("initial_tab")
+        openNoteIdState = intent.getLongExtra("open_note_id", -1L).takeIf { it > 0 }
 
         val prefs = getSharedPreferences("checker_tic_prefs", Context.MODE_PRIVATE)
         val savedThemeStr = prefs.getString("theme_mode", ThemeMode.DARK.name) ?: ThemeMode.DARK.name
@@ -39,10 +46,19 @@ class MainActivity : ComponentActivity() {
             CheckerTicTheme(themeMode = themeMode) {
                 MainScreen(
                     currentThemeMode = themeMode,
-                    onThemeModeChange = { themeMode = it }
+                    onThemeModeChange = { themeMode = it },
+                    initialTab = initialTabState,
+                    openNoteId = openNoteIdState
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        initialTabState = intent.getStringExtra("initial_tab")
+        openNoteIdState = intent.getLongExtra("open_note_id", -1L).takeIf { it > 0 }
     }
 
     private fun initWorkManager() {

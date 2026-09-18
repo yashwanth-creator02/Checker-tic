@@ -13,6 +13,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,10 +46,28 @@ fun MainScreen(
     currentThemeMode: ThemeMode = ThemeMode.DARK,
     onThemeModeChange: (ThemeMode) -> Unit = {},
     tasksViewModel: TasksViewModel = viewModel(),
-    notesViewModel: NotesViewModel = viewModel()
+    notesViewModel: NotesViewModel = viewModel(),
+    initialTab: String? = null,
+    openNoteId: Long? = null
 ) {
     val navController = rememberNavController()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+
+    // Handle deep-link navigation from widget or note popup
+    LaunchedEffect(openNoteId) {
+        if (openNoteId != null && openNoteId > 0) {
+            navController.navigate("note_edit/$openNoteId")
+        }
+    }
+
+    LaunchedEffect(initialTab) {
+        if (initialTab == "notes" && openNoteId == null) {
+            navController.navigate(Screen.Notes.route) {
+                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                launchSingleTop = true
+            }
+        }
+    }
 
     val shouldShowBottomBar = currentRoute != "categories_settings" &&
             currentRoute?.startsWith("note_edit") != true

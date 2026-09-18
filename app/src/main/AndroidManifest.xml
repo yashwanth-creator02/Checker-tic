@@ -32,6 +32,14 @@
             android:excludeFromRecents="true"
             android:taskAffinity="" />
 
+        <!-- Note popup dialog: scrollable content viewer over home screen -->
+        <activity
+            android:name=".ui.trampoline.NotePopupActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CheckerTic.Dialog"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
+
         <!-- Glance widget receiver -->
         <receiver
             android:name=".widget.CheckerTicWidgetReceiver"

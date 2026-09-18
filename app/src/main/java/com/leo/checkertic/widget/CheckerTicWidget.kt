@@ -51,6 +51,7 @@ import com.leo.checkertic.data.entity.CategoryEntity
 import com.leo.checkertic.data.entity.NoteEntity
 import com.leo.checkertic.data.entity.TaskEntity
 import com.leo.checkertic.data.repository.TaskRepository
+import com.leo.checkertic.ui.trampoline.NotePopupActivity
 import com.leo.checkertic.ui.trampoline.QuickAddActivity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -193,10 +194,15 @@ private fun WidgetContent(
             Spacer(modifier = GlanceModifier.defaultWeight())
 
             // Jump to app button in the bottom-left corner
+            val mainActivityParams = if (currentTab == "notes") {
+                actionParametersOf(ActionParameters.Key<String>("initial_tab") to "notes")
+            } else {
+                actionParametersOf(ActionParameters.Key<String>("initial_tab") to "tasks")
+            }
             Box(
                 modifier = GlanceModifier
                     .size(36.dp)
-                    .clickable(actionStartActivity<MainActivity>()),
+                    .clickable(actionStartActivity<MainActivity>(mainActivityParams)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -475,7 +481,13 @@ private fun NoteWidgetCard(
             .height(64.dp)
             .background(ImageProvider(R.drawable.bg_note_card))
             .padding(8.dp)
-            .clickable(actionStartActivity<MainActivity>())
+            .clickable(
+                actionStartActivity<NotePopupActivity>(
+                    actionParametersOf(
+                        ActionParameters.Key<Long>(NotePopupActivity.EXTRA_NOTE_ID) to note.id
+                    )
+                )
+            )
     ) {
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
