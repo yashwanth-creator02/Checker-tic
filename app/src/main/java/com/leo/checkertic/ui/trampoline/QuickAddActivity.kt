@@ -59,6 +59,7 @@ class QuickAddActivity : ComponentActivity() {
         setContent {
             CheckerTicTheme {
                 var text by remember { mutableStateOf("") }
+                var contentText by remember { mutableStateOf("") }
 
                 Card(
                     modifier = Modifier
@@ -82,6 +83,17 @@ class QuickAddActivity : ComponentActivity() {
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        if (type == "note") {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            TextField(
+                                value = contentText,
+                                onValueChange = { contentText = it },
+                                placeholder = { Text("Note content (optional)") },
+                                minLines = 3,
+                                maxLines = 5,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.align(Alignment.End)
@@ -92,8 +104,17 @@ class QuickAddActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.width(8.dp))
                             TextButton(
                                 onClick = {
-                                    if (text.isNotBlank()) {
-                                        saveAndDismiss(type, text.trim(), categoryId, db)
+                                    val trimmedTitle = text.trim()
+                                    val trimmedContent = contentText.trim()
+                                    if (type == "task") {
+                                        if (trimmedTitle.isNotBlank()) {
+                                            saveAndDismiss(type, trimmedTitle, "", categoryId, db)
+                                        }
+                                    } else {
+                                        if (trimmedTitle.isNotBlank() || trimmedContent.isNotBlank()) {
+                                            val finalTitle = trimmedTitle.ifEmpty { "Untitled" }
+                                            saveAndDismiss(type, finalTitle, trimmedContent, categoryId, db)
+                                        }
                                     }
                                 }
                             ) {
@@ -106,7 +127,7 @@ class QuickAddActivity : ComponentActivity() {
         }
     }
 
-    private fun saveAndDismiss(type: String, text: String, categoryId: Long, db: AppDatabase) {
+    private fun saveAndDismiss(type: String, text: String, content: String, categoryId: Long, db: AppDatabase) {
         runBlocking(Dispatchers.IO) {
             if (type == "task") {
                 val resolvedCatId = if (categoryId > 0) {
@@ -118,7 +139,13 @@ class QuickAddActivity : ComponentActivity() {
                 taskRepo.addTask(text, resolvedCatId)
             } else {
                 val noteRepo = NoteRepository(db.noteDao())
-                noteRepo.insert(NoteEntity(title = text, updatedAt = System.currentTimeMillis()))
+                noteRepo.insert(
+                    NoteEntity(
+                        title = text,
+                        content = content,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
             }
             com.leo.checkertic.widget.WidgetUpdater.update(applicationContext)
         }

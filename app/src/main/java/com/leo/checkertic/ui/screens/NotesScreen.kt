@@ -2,6 +2,7 @@ package com.leo.checkertic.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -145,24 +146,37 @@ fun NotesScreen(
 
     if (showAddDialog) {
         var title by remember { mutableStateOf("") }
+        var content by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
             title = { Text("New Note") },
             text = {
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = { Text("Note title") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        placeholder = { Text("Note title") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    TextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        placeholder = { Text("Note content (optional)") },
+                        minLines = 3,
+                        maxLines = 6,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val trimmed = title.trim()
-                        if (trimmed.isNotEmpty()) {
-                            viewModel.addNote(trimmed) { id ->
+                        val trimmedTitle = title.trim()
+                        val trimmedContent = content.trim()
+                        if (trimmedTitle.isNotEmpty() || trimmedContent.isNotEmpty()) {
+                            val finalTitle = trimmedTitle.ifEmpty { "Untitled" }
+                            viewModel.addNote(finalTitle, trimmedContent) { id ->
                                 showAddDialog = false
                                 onNoteClick(id)
                             }
