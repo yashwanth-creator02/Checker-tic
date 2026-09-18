@@ -19,15 +19,16 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     val notes: StateFlow<List<NoteEntity>> = noteRepo.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addNote(title: String, content: String = "") {
+    fun addNote(title: String, content: String = "", onCreated: ((Long) -> Unit)? = null) {
         viewModelScope.launch {
-            noteRepo.insert(
+            val id = noteRepo.insert(
                 NoteEntity(
                     title = title,
                     content = content,
                     updatedAt = System.currentTimeMillis()
                 )
             )
+            onCreated?.invoke(id)
         }
     }
 

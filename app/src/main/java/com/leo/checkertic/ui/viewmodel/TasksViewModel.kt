@@ -105,6 +105,23 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun toggleTask(task: TaskEntity) {
+        viewModelScope.launch {
+            if (task.completed) {
+                taskRepo.uncompleteTask(task.id)
+            } else {
+                taskRepo.completeTask(task.id)
+            }
+        }
+    }
+
+    fun clearCompletedTasks() {
+        viewModelScope.launch {
+            val all = tasks.value
+            all.filter { it.completed }.forEach { taskRepo.deleteTask(it) }
+        }
+    }
+
     fun updateRecurrence(categoryId: Long, type: String, customDays: Int = 0) {
         viewModelScope.launch {
             categoryRepo.updateRecurrence(categoryId, type, customDays)

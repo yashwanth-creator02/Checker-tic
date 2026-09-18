@@ -5,11 +5,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.leo.checkertic.ui.screens.MainScreen
 import com.leo.checkertic.ui.theme.CheckerTicTheme
+import com.leo.checkertic.ui.theme.ThemeMode
 import com.leo.checkertic.work.WidgetRefreshWorker
 import java.util.concurrent.TimeUnit
 
@@ -19,9 +24,23 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         initWorkManager()
+
+        val prefs = getSharedPreferences("checker_tic_prefs", Context.MODE_PRIVATE)
+        val savedThemeStr = prefs.getString("theme_mode", ThemeMode.DARK.name) ?: ThemeMode.DARK.name
+        val initialTheme = try {
+            ThemeMode.valueOf(savedThemeStr)
+        } catch (e: Exception) {
+            ThemeMode.DARK
+        }
+
         setContent {
-            CheckerTicTheme {
-                MainScreen()
+            var themeMode by remember { mutableStateOf(initialTheme) }
+
+            CheckerTicTheme(themeMode = themeMode) {
+                MainScreen(
+                    currentThemeMode = themeMode,
+                    onThemeModeChange = { themeMode = it }
+                )
             }
         }
     }
