@@ -128,7 +128,12 @@ fun NotesScreen(
                 items(notes, key = { it.id }) { note ->
                     NoteCard(
                         note = note,
-                        onClick = { onNoteClick(note.id) }
+                        onClick = { onNoteClick(note.id) },
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                            placementSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                            fadeOutSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                        )
                     )
                 }
                 item {

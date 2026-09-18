@@ -1,5 +1,9 @@
 package com.leo.checkertic.ui.screens
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Checklist
@@ -118,7 +122,11 @@ fun MainScreen(
         NavHost(
             navController = navController,
             startDestination = Screen.Tasks.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn(animationSpec = tween(180, easing = LinearEasing)) },
+            exitTransition = { fadeOut(animationSpec = tween(180, easing = LinearEasing)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(180, easing = LinearEasing)) },
+            popExitTransition = { fadeOut(animationSpec = tween(180, easing = LinearEasing)) }
         ) {
             composable(Screen.Tasks.route) {
                 TasksScreen(
