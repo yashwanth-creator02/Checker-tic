@@ -330,7 +330,7 @@ private fun TasksWidgetContent(
                 )
             }
         } else {
-            LazyColumn(modifier = GlanceModifier.fillMaxSize().padding(bottom = 40.dp)) {
+            LazyColumn(modifier = GlanceModifier.fillMaxSize().padding(top = 2.dp, end = 2.dp, bottom = 40.dp)) {
                 items(tasks, itemId = { it.id }) { task ->
                     val isCompleting = task.id == completingTaskId
                     val phase = if (isCompleting) completingPhase else 0
@@ -357,7 +357,7 @@ private fun TasksWidgetContent(
 
                     val baseModifier = GlanceModifier
                         .fillMaxWidth()
-                        .height(46.dp)
+                        .height(50.dp)
                         .background(ImageProvider(rowBackground))
 
                     val rowModifier = if (!isCompleting) {
@@ -385,7 +385,7 @@ private fun TasksWidgetContent(
                             modifier = GlanceModifier
                                 .defaultWeight()
                                 .fillMaxHeight()
-                                .padding(horizontal = 12.dp),
+                                .padding(horizontal = 14.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
@@ -408,7 +408,7 @@ private fun TasksWidgetContent(
                                 .background(ImageProvider(rightTickerRes))
                         ) {}
                     }
-                    Spacer(modifier = GlanceModifier.height(8.dp))
+                    Spacer(modifier = GlanceModifier.height(12.dp))
                 }
             }
         }
