@@ -1,22 +1,24 @@
+# Built files and Gradle
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
+.gradle/
+build/
+/build/
 /captures
 .externalNativeBuild
 .cxx
+.kotlin/
 local.properties
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
 
 # brand-leo-utils: managed skills (source of truth lives in the brand-leo-utils repo)
 .agent/
 .agents/
+.artifacts/
 
 # 3-Layer Architecture (AGENTS.md)
 .tmp/

@@ -2,4 +2,12 @@
 <resources>
 
     <style name="Theme.CheckerTic" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Transparent dialog theme for the quick-add trampoline -->
+    <style name="Theme.CheckerTic.Dialog" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
 </resources>
