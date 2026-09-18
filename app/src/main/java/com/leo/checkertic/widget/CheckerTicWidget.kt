@@ -346,12 +346,14 @@ private fun TasksWidgetContent(
                     }
                     val textColor = when (phase) {
                         1 -> Color(0xFF86EFAC)
-                        2 -> Color(0x4486EFAC)
+                        2 -> Color(0x3386EFAC)
                         else -> if (task.completed) Color(0xFF6B7280) else Color(0xFFF3F4F6)
                     }
-                    val rowBackground = if (phase == 2) R.drawable.bg_task_row_faded else R.drawable.bg_task_row
-                    val showStrikeLine = phase > 0
-                    val strikeLineColor = if (phase == 2) Color(0x4422C55E) else Color(0xFF22C55E)
+                    val rowBackground = when (phase) {
+                        1 -> R.drawable.bg_task_row_blinking
+                        2 -> R.drawable.bg_task_row_faded
+                        else -> R.drawable.bg_task_row
+                    }
 
                     val baseModifier = GlanceModifier
                         .fillMaxWidth()
@@ -378,7 +380,7 @@ private fun TasksWidgetContent(
                                 .background(ImageProvider(leftTickerRes))
                         ) {}
 
-                        // Task title with line passing animation
+                        // Task title (no strikethrough line)
                         Box(
                             modifier = GlanceModifier
                                 .defaultWeight()
@@ -392,19 +394,10 @@ private fun TasksWidgetContent(
                                 style = TextStyle(
                                     color = ColorProvider(textColor),
                                     fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    textDecoration = if (showStrikeLine || task.completed) TextDecoration.LineThrough else TextDecoration.None
+                                    fontWeight = if (phase == 1) FontWeight.Medium else FontWeight.Normal,
+                                    textDecoration = TextDecoration.None
                                 )
                             )
-
-                            if (showStrikeLine) {
-                                Box(
-                                    modifier = GlanceModifier
-                                        .fillMaxWidth()
-                                        .height(2.dp)
-                                        .background(ColorProvider(strikeLineColor))
-                                ) {}
-                            }
                         }
 
                         // Right vertical ticker bar (20dp with 14dp rounded corners)
@@ -551,6 +544,35 @@ class SwitchCategoryAction : ActionCallback {
     }
 }
 
+private suspend fun completeTaskWithBlink(context: Context, glanceId: GlanceId, taskId: Long) {
+    val db = AppDatabase.getInstance(context)
+    val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
+    try {
+        // Phase 1: Blink ON (bright green card background, active green tickers & green text)
+        updateAppWidgetState(context, glanceId) { prefs ->
+            prefs[CheckerTicWidget.COMPLETING_TASK_ID_KEY] = taskId
+            prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 1
+        }
+        CheckerTicWidget().update(context, glanceId)
+        kotlinx.coroutines.delay(160)
+
+        // Phase 2: Blink OFF (dimmed background, faded tickers)
+        updateAppWidgetState(context, glanceId) { prefs ->
+            prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 2
+        }
+        CheckerTicWidget().update(context, glanceId)
+        kotlinx.coroutines.delay(140)
+    } finally {
+        // Phase 3: Mark complete in DB and disappear from the widget
+        taskRepo.completeTask(taskId)
+        updateAppWidgetState(context, glanceId) { prefs ->
+            prefs.remove(CheckerTicWidget.COMPLETING_TASK_ID_KEY)
+            prefs.remove(CheckerTicWidget.COMPLETING_PHASE_KEY)
+        }
+        WidgetUpdater.update(context)
+    }
+}
+
 class ToggleTaskAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val taskId = parameters[CheckerTicWidget.TASK_ID_PARAM] ?: return
@@ -559,19 +581,16 @@ class ToggleTaskAction : ActionCallback {
         val task = db.taskDao().getById(taskId) ?: return
         if (task.completed) {
             taskRepo.uncompleteTask(taskId)
+            WidgetUpdater.update(context)
         } else {
-            taskRepo.completeTask(taskId)
+            completeTaskWithBlink(context, glanceId, taskId)
         }
-        WidgetUpdater.update(context)
     }
 }
 
 class CompleteTaskAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val taskId = parameters[CheckerTicWidget.TASK_ID_PARAM] ?: return
-        val db = AppDatabase.getInstance(context)
-        val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
-        taskRepo.completeTask(taskId)
-        WidgetUpdater.update(context)
+        completeTaskWithBlink(context, glanceId, taskId)
     }
 }
