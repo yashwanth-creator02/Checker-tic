@@ -33,6 +33,17 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
     val tasks: StateFlow<List<TaskEntity>> = _selectedCategoryId
         .flatMapLatest { catId ->
             if (catId != null) {
+                taskRepo.getIncompleteTasksForCategory(catId)
+            } else {
+                flowOf(emptyList())
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val allTasks: StateFlow<List<TaskEntity>> = _selectedCategoryId
+        .flatMapLatest { catId ->
+            if (catId != null) {
                 taskRepo.getTasksForCategory(catId)
             } else {
                 flowOf(emptyList())
@@ -117,7 +128,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearCompletedTasks() {
         viewModelScope.launch {
-            val all = tasks.value
+            val all = allTasks.value
             all.filter { it.completed }.forEach { taskRepo.deleteTask(it) }
         }
     }

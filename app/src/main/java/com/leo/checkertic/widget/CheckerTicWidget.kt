@@ -86,9 +86,9 @@ class CheckerTicWidget : GlanceAppWidget() {
                 runBlocking { taskRepo.ensureRecurrenceReset(activeCategoryId) }
             }
 
-            // Fetch all tasks for the active category (both incomplete and completed)
+            // Fetch incomplete tasks for the active category so completed tasks disappear
             val tasks = if (currentTab == "tasks" && activeCategoryId > 0L) {
-                runBlocking { db.taskDao().getTasksForCategory(activeCategoryId).first() }
+                runBlocking { db.taskDao().getIncompleteTasksForCategory(activeCategoryId).first() }
             } else emptyList()
 
             // Fetch notes
@@ -177,6 +177,24 @@ private fun WidgetContent(
                         ColorProvider(if (isNotesActive) Color(0xFF38BDF8) else Color(0xFF71717A))
                     ),
                     modifier = GlanceModifier.size(20.dp)
+                )
+            }
+
+            // Spacer to push jump-to-app icon to the bottom-left corner
+            Spacer(modifier = GlanceModifier.defaultWeight())
+
+            // Jump to app button in the bottom-left corner
+            Box(
+                modifier = GlanceModifier
+                    .size(36.dp)
+                    .clickable(actionStartActivity<MainActivity>()),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    provider = ImageProvider(R.drawable.ic_open_app),
+                    contentDescription = "Open App",
+                    colorFilter = ColorFilter.tint(ColorProvider(Color(0xFF71717A))),
+                    modifier = GlanceModifier.size(18.dp)
                 )
             }
         }
@@ -300,9 +318,9 @@ private fun TasksWidgetContent(
                     Row(
                         modifier = GlanceModifier
                             .fillMaxWidth()
-                            .height(38.dp)
+                            .height(46.dp)
                             .background(ImageProvider(R.drawable.bg_task_row))
-                            .clickable(actionRunCallback<ToggleTaskAction>(
+                            .clickable(actionRunCallback<CompleteTaskAction>(
                                 actionParametersOf(CheckerTicWidget.TASK_ID_PARAM to task.id)
                             )),
                         verticalAlignment = Alignment.CenterVertically
@@ -310,17 +328,17 @@ private fun TasksWidgetContent(
                         // Left vertical accent bar
                         Box(
                             modifier = GlanceModifier
-                                .width(3.dp)
+                                .width(3.5.dp)
                                 .fillMaxHeight()
                                 .background(ColorProvider(accentColor))
                         ) {}
 
-                        // Task title
+                        // Task title (large clickable area)
                         Box(
                             modifier = GlanceModifier
                                 .defaultWeight()
                                 .fillMaxHeight()
-                                .padding(horizontal = 10.dp),
+                                .padding(horizontal = 12.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
@@ -328,7 +346,7 @@ private fun TasksWidgetContent(
                                 maxLines = 1,
                                 style = TextStyle(
                                     color = ColorProvider(textColor),
-                                    fontSize = 13.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Normal,
                                     textDecoration = decoration
                                 )
@@ -338,7 +356,7 @@ private fun TasksWidgetContent(
                         // Right vertical accent bar
                         Box(
                             modifier = GlanceModifier
-                                .width(3.dp)
+                                .width(3.5.dp)
                                 .fillMaxHeight()
                                 .background(ColorProvider(accentColor))
                         ) {}

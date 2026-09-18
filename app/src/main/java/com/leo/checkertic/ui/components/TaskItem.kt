@@ -40,7 +40,7 @@ fun TaskItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(52.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onToggle),

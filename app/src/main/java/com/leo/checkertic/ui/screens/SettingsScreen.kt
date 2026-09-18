@@ -59,7 +59,7 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val tasks by viewModel.tasks.collectAsState()
+    val tasks by viewModel.allTasks.collectAsState()
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE) }
     var nightlyRefreshEnabled by remember {
