@@ -6,6 +6,9 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.leo.checkertic.widget.WidgetUpdater
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +31,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         initWorkManager()
+
+        lifecycleScope.launch {
+            WidgetUpdater.update(applicationContext)
+        }
 
         initialTabState = intent.getStringExtra("initial_tab")
         openNoteIdState = intent.getLongExtra("open_note_id", -1L).takeIf { it > 0 }
@@ -59,6 +66,13 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         initialTabState = intent.getStringExtra("initial_tab")
         openNoteIdState = intent.getLongExtra("open_note_id", -1L).takeIf { it > 0 }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            WidgetUpdater.update(applicationContext)
+        }
     }
 
     private fun initWorkManager() {

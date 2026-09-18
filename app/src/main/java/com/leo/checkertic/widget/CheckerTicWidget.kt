@@ -131,97 +131,108 @@ private fun WidgetContent(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(ImageProvider(R.drawable.bg_widget_root))
-            .padding(10.dp)
     ) {
-        // Left Sidebar
-        Column(
+        // Margin spacer from left edge
+        Spacer(modifier = GlanceModifier.width(10.dp))
+
+        // Left Sidebar Dock with vertical margin
+        Box(
             modifier = GlanceModifier
                 .fillMaxHeight()
-                .width(44.dp)
-                .background(ImageProvider(R.drawable.bg_widget_sidebar))
-                .padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(vertical = 10.dp)
         ) {
-            // Tasks tab button
-            val isTasksActive = currentTab == "tasks"
-            Box(
-                modifier = (if (isTasksActive) {
-                    GlanceModifier.background(ImageProvider(R.drawable.bg_tab_selected))
-                } else {
-                    GlanceModifier
-                })
-                    .size(36.dp)
-                    .clickable(actionRunCallback<SwitchTabAction>(
-                        actionParametersOf(CheckerTicWidget.TAB_PARAM to "tasks")
-                    )),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    provider = ImageProvider(R.drawable.ic_widget_tasks),
-                    contentDescription = "Tasks",
-                    colorFilter = ColorFilter.tint(
-                        ColorProvider(if (isTasksActive) Color(0xFF38BDF8) else Color(0xFF71717A))
-                    ),
-                    modifier = GlanceModifier.size(20.dp)
-                )
-            }
-
-            Spacer(modifier = GlanceModifier.height(8.dp))
-
-            // Notes tab button
-            val isNotesActive = currentTab == "notes"
-            Box(
-                modifier = (if (isNotesActive) {
-                    GlanceModifier.background(ImageProvider(R.drawable.bg_tab_selected))
-                } else {
-                    GlanceModifier
-                })
-                    .size(36.dp)
-                    .clickable(actionRunCallback<SwitchTabAction>(
-                        actionParametersOf(CheckerTicWidget.TAB_PARAM to "notes")
-                    )),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    provider = ImageProvider(R.drawable.ic_widget_notes),
-                    contentDescription = "Notes",
-                    colorFilter = ColorFilter.tint(
-                        ColorProvider(if (isNotesActive) Color(0xFF38BDF8) else Color(0xFF71717A))
-                    ),
-                    modifier = GlanceModifier.size(20.dp)
-                )
-            }
-
-            // Spacer to push jump-to-app icon to the bottom-left corner
-            Spacer(modifier = GlanceModifier.defaultWeight())
-
-            // Jump to app button in the bottom-left corner
-            val mainActivityParams = if (currentTab == "notes") {
-                actionParametersOf(ActionParameters.Key<String>("initial_tab") to "notes")
-            } else {
-                actionParametersOf(ActionParameters.Key<String>("initial_tab") to "tasks")
-            }
-            Box(
+            Column(
                 modifier = GlanceModifier
-                    .size(36.dp)
-                    .clickable(actionStartActivity<MainActivity>(mainActivityParams)),
-                contentAlignment = Alignment.Center
+                    .fillMaxHeight()
+                    .width(44.dp)
+                    .background(ImageProvider(R.drawable.bg_widget_sidebar))
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Image(
-                    provider = ImageProvider(R.drawable.ic_open_app),
-                    contentDescription = "Open App",
-                    colorFilter = ColorFilter.tint(ColorProvider(Color(0xFF71717A))),
-                    modifier = GlanceModifier.size(18.dp)
-                )
+                // Tasks tab button
+                val isTasksActive = currentTab == "tasks"
+                Box(
+                    modifier = (if (isTasksActive) {
+                        GlanceModifier.background(ImageProvider(R.drawable.bg_tab_selected))
+                    } else {
+                        GlanceModifier
+                    })
+                        .size(36.dp)
+                        .clickable(actionRunCallback<SwitchTabAction>(
+                            actionParametersOf(CheckerTicWidget.TAB_PARAM to "tasks")
+                        )),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        provider = ImageProvider(R.drawable.ic_widget_tasks),
+                        contentDescription = "Tasks",
+                        colorFilter = ColorFilter.tint(
+                            ColorProvider(if (isTasksActive) Color(0xFF38BDF8) else Color(0xFF71717A))
+                        ),
+                        modifier = GlanceModifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = GlanceModifier.height(8.dp))
+
+                // Notes tab button
+                val isNotesActive = currentTab == "notes"
+                Box(
+                    modifier = (if (isNotesActive) {
+                        GlanceModifier.background(ImageProvider(R.drawable.bg_tab_selected))
+                    } else {
+                        GlanceModifier
+                    })
+                        .size(36.dp)
+                        .clickable(actionRunCallback<SwitchTabAction>(
+                            actionParametersOf(CheckerTicWidget.TAB_PARAM to "notes")
+                        )),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        provider = ImageProvider(R.drawable.ic_widget_notes),
+                        contentDescription = "Notes",
+                        colorFilter = ColorFilter.tint(
+                            ColorProvider(if (isNotesActive) Color(0xFF38BDF8) else Color(0xFF71717A))
+                        ),
+                        modifier = GlanceModifier.size(20.dp)
+                    )
+                }
+
+                // Spacer to push jump-to-app icon to the bottom of the sidebar
+                Spacer(modifier = GlanceModifier.defaultWeight())
+
+                // Jump to app button in the bottom of the sidebar
+                val mainActivityParams = if (currentTab == "notes") {
+                    actionParametersOf(ActionParameters.Key<String>("initial_tab") to "notes")
+                } else {
+                    actionParametersOf(ActionParameters.Key<String>("initial_tab") to "tasks")
+                }
+                Box(
+                    modifier = GlanceModifier
+                        .size(36.dp)
+                        .clickable(actionStartActivity<MainActivity>(mainActivityParams)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        provider = ImageProvider(R.drawable.ic_open_app),
+                        contentDescription = "Open App",
+                        colorFilter = ColorFilter.tint(ColorProvider(Color(0xFF71717A))),
+                        modifier = GlanceModifier.size(18.dp)
+                    )
+                }
             }
         }
+
+        // Margin spacer between sidebar and main content
+        Spacer(modifier = GlanceModifier.width(10.dp))
 
         // Main Content Area with Bottom-Right FAB
         Box(
             modifier = GlanceModifier
                 .defaultWeight()
                 .fillMaxHeight()
-                .padding(start = 10.dp)
+                .padding(vertical = 10.dp)
         ) {
             if (currentTab == "tasks") {
                 TasksWidgetContent(
@@ -264,6 +275,9 @@ private fun WidgetContent(
                 }
             }
         }
+
+        // Margin spacer on right edge
+        Spacer(modifier = GlanceModifier.width(10.dp))
     }
 }
 
@@ -368,47 +382,52 @@ private fun TasksWidgetContent(
                         baseModifier
                     }
 
-                    Row(
-                        modifier = rowModifier,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = GlanceModifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp)
                     ) {
-                        // Left vertical ticker bar (20dp with 14dp rounded corners)
-                        Box(
-                            modifier = GlanceModifier
-                                .width(20.dp)
-                                .fillMaxHeight()
-                                .background(ImageProvider(leftTickerRes))
-                        ) {}
-
-                        // Task title (no strikethrough line)
-                        Box(
-                            modifier = GlanceModifier
-                                .defaultWeight()
-                                .fillMaxHeight()
-                                .padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.CenterStart
+                        Row(
+                            modifier = rowModifier,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = task.title,
-                                maxLines = 1,
-                                style = TextStyle(
-                                    color = ColorProvider(textColor),
-                                    fontSize = 14.sp,
-                                    fontWeight = if (phase == 1) FontWeight.Medium else FontWeight.Normal,
-                                    textDecoration = TextDecoration.None
-                                )
-                            )
-                        }
+                            // Left vertical ticker bar (20dp with 14dp rounded corners)
+                            Box(
+                                modifier = GlanceModifier
+                                    .width(20.dp)
+                                    .fillMaxHeight()
+                                    .background(ImageProvider(leftTickerRes))
+                            ) {}
 
-                        // Right vertical ticker bar (20dp with 14dp rounded corners)
-                        Box(
-                            modifier = GlanceModifier
-                                .width(20.dp)
-                                .fillMaxHeight()
-                                .background(ImageProvider(rightTickerRes))
-                        ) {}
+                            // Task title (no strikethrough line)
+                            Box(
+                                modifier = GlanceModifier
+                                    .defaultWeight()
+                                    .fillMaxHeight()
+                                    .padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = task.title,
+                                    maxLines = 1,
+                                    style = TextStyle(
+                                        color = ColorProvider(textColor),
+                                        fontSize = 14.sp,
+                                        fontWeight = if (phase == 1) FontWeight.Medium else FontWeight.Normal,
+                                        textDecoration = TextDecoration.None
+                                    )
+                                )
+                            }
+
+                            // Right vertical ticker bar (20dp with 14dp rounded corners)
+                            Box(
+                                modifier = GlanceModifier
+                                    .width(20.dp)
+                                    .fillMaxHeight()
+                                    .background(ImageProvider(rightTickerRes))
+                            ) {}
+                        }
                     }
-                    Spacer(modifier = GlanceModifier.height(12.dp))
                 }
             }
         }
