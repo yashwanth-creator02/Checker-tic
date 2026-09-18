@@ -185,7 +185,8 @@ fun TasksScreen(
                     items(tasks, key = { it.id }) { task ->
                         TaskItem(
                             task = task,
-                            onToggle = { viewModel.toggleTask(task) }
+                            onToggle = { viewModel.toggleTask(task) },
+                            modifier = Modifier.animateItem()
                         )
                     }
                     // Bottom spacer for FAB clearance

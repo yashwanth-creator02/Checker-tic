@@ -8,6 +8,7 @@ import com.leo.checkertic.data.entity.CategoryEntity
 import com.leo.checkertic.data.entity.TaskEntity
 import com.leo.checkertic.data.repository.CategoryRepository
 import com.leo.checkertic.data.repository.TaskRepository
+import com.leo.checkertic.widget.WidgetUpdater
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -66,6 +67,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
                 CategoryEntity(name = name, orderIndex = nextIndex)
             )
             _selectedCategoryId.value = id
+            WidgetUpdater.update(getApplication())
         }
     }
 
@@ -75,12 +77,14 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
             if (_selectedCategoryId.value == category.id) {
                 _selectedCategoryId.value = categories.value.firstOrNull()?.id
             }
+            WidgetUpdater.update(getApplication())
         }
     }
 
     fun renameCategory(category: CategoryEntity, newName: String) {
         viewModelScope.launch {
             categoryRepo.update(category.copy(name = newName))
+            WidgetUpdater.update(getApplication())
         }
     }
 
@@ -88,6 +92,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val updates = reorderedList.mapIndexed { index, cat -> cat.id to index }
             categoryRepo.updateOrderIndexes(updates)
+            WidgetUpdater.update(getApplication())
         }
     }
 
@@ -95,24 +100,28 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         val categoryId = _selectedCategoryId.value ?: return
         viewModelScope.launch {
             taskRepo.addTask(title, categoryId)
+            WidgetUpdater.update(getApplication())
         }
     }
 
     fun completeTask(taskId: Long) {
         viewModelScope.launch {
             taskRepo.completeTask(taskId)
+            WidgetUpdater.update(getApplication())
         }
     }
 
     fun uncompleteTask(taskId: Long) {
         viewModelScope.launch {
             taskRepo.uncompleteTask(taskId)
+            WidgetUpdater.update(getApplication())
         }
     }
 
     fun deleteTask(task: TaskEntity) {
         viewModelScope.launch {
             taskRepo.deleteTask(task)
+            WidgetUpdater.update(getApplication())
         }
     }
 
@@ -123,6 +132,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 taskRepo.completeTask(task.id)
             }
+            WidgetUpdater.update(getApplication())
         }
     }
 
@@ -130,12 +140,14 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val all = allTasks.value
             all.filter { it.completed }.forEach { taskRepo.deleteTask(it) }
+            WidgetUpdater.update(getApplication())
         }
     }
 
     fun updateRecurrence(categoryId: Long, type: String, customDays: Int = 0) {
         viewModelScope.launch {
             categoryRepo.updateRecurrence(categoryId, type, customDays)
+            WidgetUpdater.update(getApplication())
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.ColorFilter
@@ -59,6 +60,8 @@ class CheckerTicWidget : GlanceAppWidget() {
     companion object {
         val CURRENT_TAB_KEY = stringPreferencesKey("current_tab")       // "tasks" | "notes"
         val SELECTED_CATEGORY_KEY = longPreferencesKey("selected_category_id")
+        val COMPLETING_TASK_ID_KEY = longPreferencesKey("completing_task_id")
+        val COMPLETING_PHASE_KEY = intPreferencesKey("completing_phase")
         val TASK_ID_PARAM = ActionParameters.Key<Long>("task_id")
         val CATEGORY_ID_PARAM = ActionParameters.Key<Long>("category_id")
         val TAB_PARAM = ActionParameters.Key<String>("tab")
@@ -71,6 +74,8 @@ class CheckerTicWidget : GlanceAppWidget() {
             val prefs = currentState<androidx.datastore.preferences.core.Preferences>()
             val currentTab = prefs[CURRENT_TAB_KEY] ?: "tasks"
             val selectedCategoryId = prefs[SELECTED_CATEGORY_KEY] ?: 0L
+            val completingTaskId = prefs[COMPLETING_TASK_ID_KEY] ?: -1L
+            val completingPhase = prefs[COMPLETING_PHASE_KEY] ?: 0
 
             // Load categories
             val categories = runBlocking { db.categoryDao().getAllOrdered().first() }
@@ -102,7 +107,9 @@ class CheckerTicWidget : GlanceAppWidget() {
                     categories = categories,
                     selectedCategoryId = activeCategoryId,
                     tasks = tasks,
-                    notes = notes
+                    notes = notes,
+                    completingTaskId = completingTaskId,
+                    completingPhase = completingPhase
                 )
             }
         }
@@ -115,7 +122,9 @@ private fun WidgetContent(
     categories: List<CategoryEntity>,
     selectedCategoryId: Long,
     tasks: List<TaskEntity>,
-    notes: List<NoteEntity>
+    notes: List<NoteEntity>,
+    completingTaskId: Long,
+    completingPhase: Int
 ) {
     Row(
         modifier = GlanceModifier
@@ -210,7 +219,9 @@ private fun WidgetContent(
                 TasksWidgetContent(
                     categories = categories,
                     selectedCategoryId = selectedCategoryId,
-                    tasks = tasks
+                    tasks = tasks,
+                    completingTaskId = completingTaskId,
+                    completingPhase = completingPhase
                 )
             } else {
                 NotesWidgetContent(notes = notes)
@@ -252,7 +263,9 @@ private fun WidgetContent(
 private fun TasksWidgetContent(
     categories: List<CategoryEntity>,
     selectedCategoryId: Long,
-    tasks: List<TaskEntity>
+    tasks: List<TaskEntity>,
+    completingTaskId: Long,
+    completingPhase: Int
 ) {
     Column(modifier = GlanceModifier.fillMaxSize()) {
         // Category tabs row
@@ -311,29 +324,49 @@ private fun TasksWidgetContent(
         } else {
             LazyColumn(modifier = GlanceModifier.fillMaxSize().padding(bottom = 40.dp)) {
                 items(tasks, itemId = { it.id }) { task ->
-                    val accentColor = if (task.completed) Color(0xFF22C55E) else Color(0xFF3F3F46)
-                    val textColor = if (task.completed) Color(0xFF6B7280) else Color(0xFFF3F4F6)
-                    val decoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None
+                    val isCompleting = task.id == completingTaskId
+                    val phase = if (isCompleting) completingPhase else 0
+
+                    val accentColor = when (phase) {
+                        1 -> Color(0xFF22C55E)
+                        2 -> Color(0x4422C55E)
+                        else -> if (task.completed) Color(0xFF22C55E) else Color(0xFF3F3F46)
+                    }
+                    val textColor = when (phase) {
+                        1 -> Color(0xFF86EFAC)
+                        2 -> Color(0x4486EFAC)
+                        else -> if (task.completed) Color(0xFF6B7280) else Color(0xFFF3F4F6)
+                    }
+                    val rowBackground = if (phase == 2) R.drawable.bg_task_row_faded else R.drawable.bg_task_row
+                    val showStrikeLine = phase > 0
+                    val strikeLineColor = if (phase == 2) Color(0x4422C55E) else Color(0xFF22C55E)
+
+                    val baseModifier = GlanceModifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                        .background(ImageProvider(rowBackground))
+
+                    val rowModifier = if (!isCompleting) {
+                        baseModifier.clickable(actionRunCallback<CompleteTaskAction>(
+                            actionParametersOf(CheckerTicWidget.TASK_ID_PARAM to task.id)
+                        ))
+                    } else {
+                        baseModifier
+                    }
 
                     Row(
-                        modifier = GlanceModifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .background(ImageProvider(R.drawable.bg_task_row))
-                            .clickable(actionRunCallback<CompleteTaskAction>(
-                                actionParametersOf(CheckerTicWidget.TASK_ID_PARAM to task.id)
-                            )),
+                        modifier = rowModifier,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left vertical accent bar
+                        // Left vertical ticker bar (20dp)
                         Box(
                             modifier = GlanceModifier
-                                .width(3.5.dp)
+                                .width(20.dp)
                                 .fillMaxHeight()
                                 .background(ColorProvider(accentColor))
                         ) {}
 
-                        // Task title (large clickable area)
+                        // Task title with line passing animation
                         Box(
                             modifier = GlanceModifier
                                 .defaultWeight()
@@ -348,15 +381,24 @@ private fun TasksWidgetContent(
                                     color = ColorProvider(textColor),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Normal,
-                                    textDecoration = decoration
+                                    textDecoration = if (showStrikeLine || task.completed) TextDecoration.LineThrough else TextDecoration.None
                                 )
                             )
+
+                            if (showStrikeLine) {
+                                Box(
+                                    modifier = GlanceModifier
+                                        .fillMaxWidth()
+                                        .height(2.dp)
+                                        .background(ColorProvider(strikeLineColor))
+                                ) {}
+                            }
                         }
 
-                        // Right vertical accent bar
+                        // Right vertical ticker bar (20dp)
                         Box(
                             modifier = GlanceModifier
-                                .width(3.5.dp)
+                                .width(20.dp)
                                 .fillMaxHeight()
                                 .background(ColorProvider(accentColor))
                         ) {}
@@ -471,6 +513,38 @@ private fun NoteWidgetCard(
 
 // -- Action callbacks --
 
+private suspend fun completeTaskWithAnimation(context: Context, glanceId: GlanceId, taskId: Long) {
+    // Phase 1: Line passes through the task + bright green ticker borders
+    updateAppWidgetState(context, glanceId) { prefs ->
+        prefs[CheckerTicWidget.COMPLETING_TASK_ID_KEY] = taskId
+        prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 1
+    }
+    CheckerTicWidget().update(context, glanceId)
+
+    // Give visual time for the line to pass across the task
+    kotlinx.coroutines.delay(200)
+
+    // Phase 2: Fade out card
+    updateAppWidgetState(context, glanceId) { prefs ->
+        prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 2
+    }
+    CheckerTicWidget().update(context, glanceId)
+
+    // Give visual time for fade out
+    kotlinx.coroutines.delay(180)
+
+    // Phase 3: Mark complete in DB and remove from active list
+    val db = AppDatabase.getInstance(context)
+    val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
+    taskRepo.completeTask(taskId)
+
+    updateAppWidgetState(context, glanceId) { prefs ->
+        prefs.remove(CheckerTicWidget.COMPLETING_TASK_ID_KEY)
+        prefs.remove(CheckerTicWidget.COMPLETING_PHASE_KEY)
+    }
+    WidgetUpdater.update(context)
+}
+
 class SwitchTabAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val tab = parameters[CheckerTicWidget.TAB_PARAM] ?: return
@@ -499,19 +573,16 @@ class ToggleTaskAction : ActionCallback {
         val task = db.taskDao().getById(taskId) ?: return
         if (task.completed) {
             taskRepo.uncompleteTask(taskId)
+            WidgetUpdater.update(context)
         } else {
-            taskRepo.completeTask(taskId)
+            completeTaskWithAnimation(context, glanceId, taskId)
         }
-        CheckerTicWidget().update(context, glanceId)
     }
 }
 
 class CompleteTaskAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val taskId = parameters[CheckerTicWidget.TASK_ID_PARAM] ?: return
-        val db = AppDatabase.getInstance(context)
-        val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
-        taskRepo.completeTask(taskId)
-        CheckerTicWidget().update(context, glanceId)
+        completeTaskWithAnimation(context, glanceId, taskId)
     }
 }

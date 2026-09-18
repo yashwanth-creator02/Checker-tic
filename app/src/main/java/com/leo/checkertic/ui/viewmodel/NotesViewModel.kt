@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.leo.checkertic.data.AppDatabase
 import com.leo.checkertic.data.entity.NoteEntity
 import com.leo.checkertic.data.repository.NoteRepository
+import com.leo.checkertic.widget.WidgetUpdater
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -28,6 +29,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     updatedAt = System.currentTimeMillis()
                 )
             )
+            WidgetUpdater.update(getApplication())
             onCreated?.invoke(id)
         }
     }
@@ -35,12 +37,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun updateNote(note: NoteEntity) {
         viewModelScope.launch {
             noteRepo.update(note.copy(updatedAt = System.currentTimeMillis()))
+            WidgetUpdater.update(getApplication())
         }
     }
 
     fun deleteNote(note: NoteEntity) {
         viewModelScope.launch {
             noteRepo.delete(note)
+            WidgetUpdater.update(getApplication())
         }
     }
 }

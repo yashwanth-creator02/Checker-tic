@@ -116,11 +116,7 @@ class QuickAddActivity : ComponentActivity() {
                 noteRepo.insert(NoteEntity(title = text, updatedAt = System.currentTimeMillis()))
             }
             // Refresh widget
-            val manager = GlanceAppWidgetManager(applicationContext)
-            val glanceIds = manager.getGlanceIds(CheckerTicWidget::class.java)
-            glanceIds.forEach { glanceId ->
-                CheckerTicWidget().update(applicationContext, glanceId)
-            }
+            com.leo.checkertic.widget.WidgetUpdater.update(applicationContext)
             finish()
         }
     }
