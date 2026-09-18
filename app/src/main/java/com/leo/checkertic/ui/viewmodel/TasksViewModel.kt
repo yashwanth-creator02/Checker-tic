@@ -108,7 +108,9 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addTask(title: String) {
-        val categoryId = _selectedCategoryId.value ?: return
+        val categoryId = _selectedCategoryId.value
+            ?: categories.value.firstOrNull()?.id
+            ?: return
         viewModelScope.launch {
             taskRepo.addTask(title, categoryId)
             launch(Dispatchers.IO) {

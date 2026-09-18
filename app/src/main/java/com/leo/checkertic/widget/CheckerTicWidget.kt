@@ -531,38 +531,6 @@ private fun NoteWidgetCard(
 
 // -- Action callbacks --
 
-private suspend fun completeTaskWithAnimation(context: Context, glanceId: GlanceId, taskId: Long) {
-    // Phase 1: Line passes through the task + bright green ticker borders
-    updateAppWidgetState(context, glanceId) { prefs ->
-        prefs[CheckerTicWidget.COMPLETING_TASK_ID_KEY] = taskId
-        prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 1
-    }
-    CheckerTicWidget().update(context, glanceId)
-
-    // Give visual time for the line to pass across the task
-    kotlinx.coroutines.delay(450)
-
-    // Phase 2: Fade out card
-    updateAppWidgetState(context, glanceId) { prefs ->
-        prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 2
-    }
-    CheckerTicWidget().update(context, glanceId)
-
-    // Give visual time for fade out
-    kotlinx.coroutines.delay(350)
-
-    // Phase 3: Mark complete in DB and remove from active list
-    val db = AppDatabase.getInstance(context)
-    val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
-    taskRepo.completeTask(taskId)
-
-    updateAppWidgetState(context, glanceId) { prefs ->
-        prefs.remove(CheckerTicWidget.COMPLETING_TASK_ID_KEY)
-        prefs.remove(CheckerTicWidget.COMPLETING_PHASE_KEY)
-    }
-    WidgetUpdater.update(context)
-}
-
 class SwitchTabAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val tab = parameters[CheckerTicWidget.TAB_PARAM] ?: return
@@ -591,16 +559,19 @@ class ToggleTaskAction : ActionCallback {
         val task = db.taskDao().getById(taskId) ?: return
         if (task.completed) {
             taskRepo.uncompleteTask(taskId)
-            WidgetUpdater.update(context)
         } else {
-            completeTaskWithAnimation(context, glanceId, taskId)
+            taskRepo.completeTask(taskId)
         }
+        WidgetUpdater.update(context)
     }
 }
 
 class CompleteTaskAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val taskId = parameters[CheckerTicWidget.TASK_ID_PARAM] ?: return
-        completeTaskWithAnimation(context, glanceId, taskId)
+        val db = AppDatabase.getInstance(context)
+        val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
+        taskRepo.completeTask(taskId)
+        WidgetUpdater.update(context)
     }
 }

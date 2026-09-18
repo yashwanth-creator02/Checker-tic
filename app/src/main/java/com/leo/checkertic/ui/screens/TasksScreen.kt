@@ -187,9 +187,9 @@ fun TasksScreen(
                             task = task,
                             onToggle = { viewModel.toggleTask(task) },
                             modifier = Modifier.animateItem(
-                                fadeInSpec = androidx.compose.animation.core.tween(220, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                                placementSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                                fadeOutSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                fadeInSpec = null,
+                                placementSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                fadeOutSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                             )
                         )
                     }

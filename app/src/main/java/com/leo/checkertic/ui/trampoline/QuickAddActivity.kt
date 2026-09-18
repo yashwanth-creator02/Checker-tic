@@ -29,8 +29,9 @@ import com.leo.checkertic.data.repository.NoteRepository
 import com.leo.checkertic.data.repository.TaskRepository
 import com.leo.checkertic.ui.theme.CheckerTicTheme
 import com.leo.checkertic.widget.CheckerTicWidget
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 /**
  * A transparent, dialog-themed Activity launched from the widget FAB.
@@ -106,19 +107,21 @@ class QuickAddActivity : ComponentActivity() {
     }
 
     private fun saveAndDismiss(type: String, text: String, categoryId: Long, db: AppDatabase) {
-        val scope = MainScope()
-        scope.launch {
-            if (type == "task" && categoryId > 0) {
+        runBlocking(Dispatchers.IO) {
+            if (type == "task") {
+                val resolvedCatId = if (categoryId > 0) {
+                    categoryId
+                } else {
+                    db.categoryDao().getAllOrdered().first().firstOrNull()?.id ?: 1L
+                }
                 val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
-                taskRepo.addTask(text, categoryId)
+                taskRepo.addTask(text, resolvedCatId)
             } else {
                 val noteRepo = NoteRepository(db.noteDao())
                 noteRepo.insert(NoteEntity(title = text, updatedAt = System.currentTimeMillis()))
             }
-            // Dismiss immediately
-            finish()
-            // Refresh widget
             com.leo.checkertic.widget.WidgetUpdater.update(applicationContext)
         }
+        finish()
     }
 }

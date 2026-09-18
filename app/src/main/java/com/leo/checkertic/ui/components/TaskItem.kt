@@ -66,15 +66,15 @@ fun TaskItem(
                 if (!task.completed) {
                     isCompleting = true
                     coroutineScope.launch {
-                        // Line passes across the task text
+                        // Line passes across the task text snappily
                         lineProgress.animateTo(
                             targetValue = 1f,
-                            animationSpec = tween(durationMillis = 400, easing = LinearEasing)
+                            animationSpec = tween(durationMillis = 150, easing = LinearEasing)
                         )
-                        // Smoothly fade out the entire card
+                        // Smoothly and swiftly fade out the card
                         itemAlpha.animateTo(
                             targetValue = 0f,
-                            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
+                            animationSpec = tween(durationMillis = 130, easing = FastOutSlowInEasing)
                         )
                         onToggle()
                     }
