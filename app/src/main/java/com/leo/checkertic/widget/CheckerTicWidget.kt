@@ -131,7 +131,7 @@ private fun WidgetContent(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(ImageProvider(R.drawable.bg_widget_root))
-            .padding(8.dp)
+            .padding(10.dp)
     ) {
         // Left Sidebar
         Column(
@@ -139,7 +139,7 @@ private fun WidgetContent(
                 .fillMaxHeight()
                 .width(44.dp)
                 .background(ImageProvider(R.drawable.bg_widget_sidebar))
-                .padding(vertical = 6.dp),
+                .padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Tasks tab button
@@ -221,7 +221,7 @@ private fun WidgetContent(
             modifier = GlanceModifier
                 .defaultWeight()
                 .fillMaxHeight()
-                .padding(start = 6.dp)
+                .padding(start = 10.dp)
         ) {
             if (currentTab == "tasks") {
                 TasksWidgetContent(
@@ -281,7 +281,7 @@ private fun TasksWidgetContent(
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .padding(bottom = 6.dp),
+                    .padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 categories.forEach { category ->
@@ -310,7 +310,7 @@ private fun TasksWidgetContent(
                             maxLines = 1
                         )
                     }
-                    Spacer(modifier = GlanceModifier.width(4.dp))
+                    Spacer(modifier = GlanceModifier.width(6.dp))
                 }
             }
         }
@@ -445,14 +445,14 @@ private fun NotesWidgetContent(notes: List<NoteEntity>) {
                 Row(
                     modifier = GlanceModifier
                         .fillMaxWidth()
-                        .padding(bottom = 6.dp)
+                        .padding(bottom = 8.dp)
                 ) {
                     NoteWidgetCard(
                         note = pair[0],
                         dotRes = dotPalette[firstIndex % dotPalette.size],
                         modifier = GlanceModifier.defaultWeight()
                     )
-                    Spacer(modifier = GlanceModifier.width(6.dp))
+                    Spacer(modifier = GlanceModifier.width(8.dp))
                     if (pair.size > 1) {
                         val secondIndex = notes.indexOf(pair[1])
                         NoteWidgetCard(
