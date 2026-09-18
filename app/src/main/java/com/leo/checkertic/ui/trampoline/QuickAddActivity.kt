@@ -115,9 +115,10 @@ class QuickAddActivity : ComponentActivity() {
                 val noteRepo = NoteRepository(db.noteDao())
                 noteRepo.insert(NoteEntity(title = text, updatedAt = System.currentTimeMillis()))
             }
+            // Dismiss immediately
+            finish()
             // Refresh widget
             com.leo.checkertic.widget.WidgetUpdater.update(applicationContext)
-            finish()
         }
     }
 }

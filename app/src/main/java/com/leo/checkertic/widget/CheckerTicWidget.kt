@@ -333,10 +333,14 @@ private fun TasksWidgetContent(
                     val isCompleting = task.id == completingTaskId
                     val phase = if (isCompleting) completingPhase else 0
 
-                    val accentColor = when (phase) {
-                        1 -> Color(0xFF22C55E)
-                        2 -> Color(0x4422C55E)
-                        else -> if (task.completed) Color(0xFF22C55E) else Color(0xFF3F3F46)
+                    val (leftTickerRes, rightTickerRes) = when (phase) {
+                        1 -> R.drawable.bg_ticker_left_active to R.drawable.bg_ticker_right_active
+                        2 -> R.drawable.bg_ticker_left_faded to R.drawable.bg_ticker_right_faded
+                        else -> if (task.completed) {
+                            R.drawable.bg_ticker_left_active to R.drawable.bg_ticker_right_active
+                        } else {
+                            R.drawable.bg_ticker_left_normal to R.drawable.bg_ticker_right_normal
+                        }
                     }
                     val textColor = when (phase) {
                         1 -> Color(0xFF86EFAC)
@@ -364,12 +368,12 @@ private fun TasksWidgetContent(
                         modifier = rowModifier,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Left vertical ticker bar (20dp)
+                        // Left vertical ticker bar (20dp with 14dp rounded corners)
                         Box(
                             modifier = GlanceModifier
                                 .width(20.dp)
                                 .fillMaxHeight()
-                                .background(ColorProvider(accentColor))
+                                .background(ImageProvider(leftTickerRes))
                         ) {}
 
                         // Task title with line passing animation
@@ -401,12 +405,12 @@ private fun TasksWidgetContent(
                             }
                         }
 
-                        // Right vertical ticker bar (20dp)
+                        // Right vertical ticker bar (20dp with 14dp rounded corners)
                         Box(
                             modifier = GlanceModifier
                                 .width(20.dp)
                                 .fillMaxHeight()
-                                .background(ColorProvider(accentColor))
+                                .background(ImageProvider(rightTickerRes))
                         ) {}
                     }
                     Spacer(modifier = GlanceModifier.height(6.dp))
@@ -534,7 +538,7 @@ private suspend fun completeTaskWithAnimation(context: Context, glanceId: Glance
     CheckerTicWidget().update(context, glanceId)
 
     // Give visual time for the line to pass across the task
-    kotlinx.coroutines.delay(200)
+    kotlinx.coroutines.delay(450)
 
     // Phase 2: Fade out card
     updateAppWidgetState(context, glanceId) { prefs ->
@@ -543,7 +547,7 @@ private suspend fun completeTaskWithAnimation(context: Context, glanceId: Glance
     CheckerTicWidget().update(context, glanceId)
 
     // Give visual time for fade out
-    kotlinx.coroutines.delay(180)
+    kotlinx.coroutines.delay(350)
 
     // Phase 3: Mark complete in DB and remove from active list
     val db = AppDatabase.getInstance(context)

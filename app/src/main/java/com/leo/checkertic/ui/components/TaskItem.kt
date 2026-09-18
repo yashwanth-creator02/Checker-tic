@@ -60,7 +60,7 @@ fun TaskItem(
             .fillMaxWidth()
             .height(52.dp)
             .graphicsLayer { alpha = itemAlpha.value }
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surface)
             .clickable(enabled = !isCompleting) {
                 if (!task.completed) {
@@ -69,12 +69,12 @@ fun TaskItem(
                         // Line passes across the task text
                         lineProgress.animateTo(
                             targetValue = 1f,
-                            animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+                            animationSpec = tween(durationMillis = 400, easing = LinearEasing)
                         )
                         // Smoothly fade out the entire card
                         itemAlpha.animateTo(
                             targetValue = 0f,
-                            animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing)
+                            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
                         )
                         onToggle()
                     }

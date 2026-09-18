@@ -9,6 +9,7 @@ import com.leo.checkertic.data.entity.TaskEntity
 import com.leo.checkertic.data.repository.CategoryRepository
 import com.leo.checkertic.data.repository.TaskRepository
 import com.leo.checkertic.widget.WidgetUpdater
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,10 +26,20 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
     private val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
 
     val categories: StateFlow<List<CategoryEntity>> = categoryRepo.getAllOrdered()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     val selectedCategoryId: StateFlow<Long?> = _selectedCategoryId
+
+    init {
+        viewModelScope.launch {
+            categories.collect { list ->
+                if (_selectedCategoryId.value == null && list.isNotEmpty()) {
+                    _selectedCategoryId.value = list.first().id
+                }
+            }
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val tasks: StateFlow<List<TaskEntity>> = _selectedCategoryId
@@ -39,7 +50,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
                 flowOf(emptyList())
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val allTasks: StateFlow<List<TaskEntity>> = _selectedCategoryId
@@ -50,7 +61,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
                 flowOf(emptyList())
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun selectCategory(id: Long) {
         _selectedCategoryId.value = id
@@ -100,7 +111,9 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
         val categoryId = _selectedCategoryId.value ?: return
         viewModelScope.launch {
             taskRepo.addTask(title, categoryId)
-            WidgetUpdater.update(getApplication())
+            launch(Dispatchers.IO) {
+                WidgetUpdater.update(getApplication())
+            }
         }
     }
 

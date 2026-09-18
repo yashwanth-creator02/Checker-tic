@@ -186,7 +186,7 @@ fun TasksScreen(
                         TaskItem(
                             task = task,
                             onToggle = { viewModel.toggleTask(task) },
-                            modifier = Modifier.animateItem()
+                            modifier = Modifier.animateItem(fadeInSpec = null)
                         )
                     }
                     // Bottom spacer for FAB clearance
