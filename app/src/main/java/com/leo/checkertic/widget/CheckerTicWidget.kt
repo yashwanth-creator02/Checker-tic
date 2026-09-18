@@ -408,7 +408,7 @@ private fun TasksWidgetContent(
                                 .background(ImageProvider(rightTickerRes))
                         ) {}
                     }
-                    Spacer(modifier = GlanceModifier.height(6.dp))
+                    Spacer(modifier = GlanceModifier.height(8.dp))
                 }
             }
         }
