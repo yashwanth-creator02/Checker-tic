@@ -27,6 +27,17 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
@@ -53,6 +64,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.leo.checkertic.R
 import com.leo.checkertic.ui.components.TaskItem
 import com.leo.checkertic.ui.theme.FabBackgroundDark
 import com.leo.checkertic.ui.theme.FabIconBlue
@@ -60,7 +74,7 @@ import com.leo.checkertic.ui.theme.NavyContainer
 import com.leo.checkertic.ui.theme.SkyBlueText
 import com.leo.checkertic.ui.viewmodel.TasksViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TasksScreen(
     viewModel: TasksViewModel,
@@ -72,6 +86,11 @@ fun TasksScreen(
     val tasks by viewModel.tasks.collectAsState()
 
     var showAddTaskDialog by remember { mutableStateOf(false) }
+    var showCategoryManagerDialog by remember { mutableStateOf(false) }
+    var categoryToRename by remember { mutableStateOf<com.leo.checkertic.data.entity.CategoryEntity?>(null) }
+    var categoryToDelete by remember { mutableStateOf<com.leo.checkertic.data.entity.CategoryEntity?>(null) }
+    var renameText by remember { mutableStateOf("") }
+    var newCategoryName by remember { mutableStateOf("") }
 
     // Auto-select first category if none selected
     LaunchedEffect(categories) {
@@ -84,11 +103,21 @@ fun TasksScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Checker-Tic",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_flip_logo),
+                            contentDescription = "Flip Logo",
+                            modifier = Modifier.size(26.dp)
+                        )
+                        Text(
+                            text = "Flip",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    }
                 },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
@@ -132,12 +161,16 @@ fun TasksScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Category Filter Pills Row
-            if (categories.isNotEmpty()) {
+            // Category Filter Pills Row + Manage Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .weight(1f)
                         .horizontalScroll(rememberScrollState()),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -151,7 +184,13 @@ fun TasksScreen(
                             } else {
                                 Modifier.clip(RoundedCornerShape(14.dp))
                             })
-                                .clickable { viewModel.selectCategory(category.id) }
+                                .combinedClickable(
+                                    onClick = { viewModel.selectCategory(category.id) },
+                                    onLongClick = {
+                                        categoryToRename = category
+                                        renameText = category.name
+                                    }
+                                )
                                 .padding(horizontal = 14.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -164,6 +203,18 @@ fun TasksScreen(
                         }
                         Spacer(modifier = Modifier.width(6.dp))
                     }
+                }
+
+                IconButton(
+                    onClick = { showCategoryManagerDialog = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Manage Categories",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
 
@@ -244,6 +295,202 @@ fun TasksScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddTaskDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Manage Categories Dialog
+    if (showCategoryManagerDialog) {
+        AlertDialog(
+            onDismissRequest = { showCategoryManagerDialog = false },
+            title = {
+                Text(text = "Manage Categories", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Add new category row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextField(
+                            value = newCategoryName,
+                            onValueChange = { newCategoryName = it },
+                            placeholder = { Text("New category...", fontSize = 13.sp) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = {
+                                if (newCategoryName.isNotBlank()) {
+                                    viewModel.addCategory(newCategoryName.trim())
+                                    newCategoryName = ""
+                                }
+                            },
+                            enabled = newCategoryName.isNotBlank()
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = "Add Category")
+                        }
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Reorder, Rename, Delete List
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        itemsIndexed(categories, key = { _, cat -> cat.id }) { index, category ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Move Up
+                                IconButton(
+                                    onClick = { viewModel.moveCategory(category, -1) },
+                                    enabled = index > 0,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowUp,
+                                        contentDescription = "Move Up",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                // Move Down
+                                IconButton(
+                                    onClick = { viewModel.moveCategory(category, 1) },
+                                    enabled = index < categories.size - 1,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Move Down",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Text(
+                                    text = category.name,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 6.dp),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+
+                                // Rename
+                                IconButton(
+                                    onClick = {
+                                        categoryToRename = category
+                                        renameText = category.name
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Edit,
+                                        contentDescription = "Rename",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+
+                                // Delete (only if > 1 category remains)
+                                IconButton(
+                                    onClick = { categoryToDelete = category },
+                                    enabled = categories.size > 1,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = "Delete",
+                                        tint = if (categories.size > 1) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCategoryManagerDialog = false }) {
+                    Text("Done")
+                }
+            }
+        )
+    }
+
+    // Rename Category Dialog
+    if (categoryToRename != null) {
+        AlertDialog(
+            onDismissRequest = { categoryToRename = null },
+            title = { Text("Rename Category") },
+            text = {
+                TextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val trimmed = renameText.trim()
+                        if (trimmed.isNotBlank()) {
+                            categoryToRename?.let { viewModel.renameCategory(it, trimmed) }
+                            categoryToRename = null
+                        }
+                    },
+                    enabled = renameText.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { categoryToRename = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Delete Category Confirmation Dialog
+    if (categoryToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { categoryToDelete = null },
+            title = { Text("Delete Category?") },
+            text = {
+                Text("Are you sure you want to delete '${categoryToDelete?.name}' and all its tasks?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        categoryToDelete?.let { viewModel.deleteCategory(it) }
+                        categoryToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { categoryToDelete = null }) {
                     Text("Cancel")
                 }
             }

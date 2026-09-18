@@ -612,6 +612,9 @@ class ToggleTaskAction : ActionCallback {
 class CompleteTaskAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val taskId = parameters[CheckerTicWidget.TASK_ID_PARAM] ?: return
-        completeTaskWithBlink(context, glanceId, taskId)
+        val db = AppDatabase.getInstance(context)
+        val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
+        taskRepo.completeTask(taskId)
+        WidgetUpdater.update(context)
     }
 }

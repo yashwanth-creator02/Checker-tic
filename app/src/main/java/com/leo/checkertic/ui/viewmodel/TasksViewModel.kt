@@ -85,8 +85,9 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteCategory(category: CategoryEntity) {
         viewModelScope.launch {
             categoryRepo.delete(category)
+            val remaining = categories.value.filter { it.id != category.id }
             if (_selectedCategoryId.value == category.id) {
-                _selectedCategoryId.value = categories.value.firstOrNull()?.id
+                _selectedCategoryId.value = remaining.firstOrNull()?.id
             }
             WidgetUpdater.update(getApplication())
         }
@@ -104,6 +105,18 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
             val updates = reorderedList.mapIndexed { index, cat -> cat.id to index }
             categoryRepo.updateOrderIndexes(updates)
             WidgetUpdater.update(getApplication())
+        }
+    }
+
+    fun moveCategory(category: CategoryEntity, direction: Int) {
+        val current = categories.value.toMutableList()
+        val index = current.indexOfFirst { it.id == category.id }
+        if (index == -1) return
+        val target = index + direction
+        if (target in current.indices) {
+            val item = current.removeAt(index)
+            current.add(target, item)
+            reorderCategories(current)
         }
     }
 

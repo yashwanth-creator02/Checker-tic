@@ -1,6 +1,10 @@
-# Checker-Tic
+# Flip
 
-A widget-first task and note management system for Android, built with Jetpack Glance, Jetpack Compose, and Room. Checker-Tic is engineered around the principle that daily task interactions belong directly on the launcher home screen rather than locked inside deep application hierarchies.
+A widget-first task and note management system for Android, built with Jetpack Glance, Jetpack Compose, and Room. Flip is engineered around the principle that daily task interactions belong directly on the launcher home screen rather than locked inside deep application hierarchies.
+
+<p align="center">
+  <img src="docs/brand/flip_icon_512.png" width="140" alt="Flip App Icon" />
+</p>
 
 ---
 
@@ -20,15 +24,14 @@ A widget-first task and note management system for Android, built with Jetpack G
 
 ### 1. Home-Screen Glance Widget
 - **Floating Sidebar Dock**: 14dp rounded floating navigation dock with 10dp outer margins, isolating navigation from widget boundaries without clipping.
-- **Instant Reactive Invalidation**: Leverages DataStore timestamp update ticks (`UPDATE_TICK_KEY`) to trigger immediate Compose runtime recomposition and fresh Room database queries upon any state mutation.
-- **Two-Phase Completion Blink**: Visual feedback mechanism transitioning through active state before marking tasks complete and removing them from the active list.
+- **Instant Task Ticking**: Direct Room database updates with synchronous DataStore timestamp invalidate ticks (`UPDATE_TICK_KEY`), marking tasks complete and updating RemoteViews with zero artificial delay.
 - **Trampoline Quick-Add**: Direct floating action button triggering lightweight dialogs (`QuickAddActivity`) to insert tasks or notes with full content straight from the launcher.
 - **Adaptive RemoteViews Layout**: Guaranteed vertical spacing between task items in Glance `LazyColumn` adapters.
 
 ### 2. Full Application Surface
-- **Category Filter Rows**: Clean category selector with real-time task filtering and category-level recurrence rules.
+- **Category Management**: Comprehensive category control allowing real-time reorganization (move up/down), inline renaming, deletion with task cascade safeguards, and on-the-fly category creation.
 - **Reverse-Chronological Ordering**: Newly created tasks immediately appear at the top of both in-app and widget lists for instant access.
-- **Note Composer**: Auto-saving note editor and multi-column staggered view with creation-time content input.
+- **Clean Note Workspace**: Dedicated auto-saving note editor and multi-column staggered view with creation-time content input and zero clutter.
 - **Soft Keyboard IME Integration**: Single-tap task creation supporting keyboard "Done" actions with automatic focus allocation.
 
 ### 3. Data & Recurrence Engine
@@ -80,7 +83,7 @@ app/src/main/java/com/leo/checkertic/
 
 ## Design & Theming
 
-Checker-Tic enforces strict design integrity:
+Flip enforces strict design integrity:
 - **Zero Hardcoded Colors**: Colors are mapped to centralized design tokens defined in `ui/theme/Color.kt` and `ui/theme/Theme.kt`.
 - **Obsidian Copper & Radiant Light**: High-contrast, authentic color hierarchy featuring deep slate containers (`#1C1E24`), midnight surfaces (`#121316`), and crisp accent highlights.
 - **Structural Typography**: Clean geometry without decorative badges or unprompted pill labels.
