@@ -15,4 +15,17 @@
 local.properties
 
 # brand-leo-utils: managed skills (source of truth lives in the brand-leo-utils repo)
-.agent/skills/
+.agent/
+.agents/
+
+# 3-Layer Architecture (AGENTS.md)
+.tmp/
+.temp/
+.env
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
