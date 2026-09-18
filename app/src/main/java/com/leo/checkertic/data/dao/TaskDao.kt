@@ -13,10 +13,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TaskDao {
 
-    @Query("SELECT * FROM tasks WHERE category_id = :categoryId ORDER BY id ASC")
+    @Query("SELECT * FROM tasks WHERE category_id = :categoryId ORDER BY id DESC")
     fun getTasksForCategory(categoryId: Long): Flow<List<TaskEntity>>
 
-    @Query("SELECT * FROM tasks WHERE category_id = :categoryId AND completed = 0 ORDER BY id ASC")
+    @Query("SELECT * FROM tasks WHERE category_id = :categoryId AND completed = 0 ORDER BY id DESC")
     fun getIncompleteTasksForCategory(categoryId: Long): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM tasks WHERE id = :id")

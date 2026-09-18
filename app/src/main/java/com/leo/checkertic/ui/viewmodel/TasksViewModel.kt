@@ -113,9 +113,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
             ?: return
         viewModelScope.launch {
             taskRepo.addTask(title, categoryId)
-            launch(Dispatchers.IO) {
-                WidgetUpdater.update(getApplication())
-            }
+            WidgetUpdater.update(getApplication())
         }
     }
 

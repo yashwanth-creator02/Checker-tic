@@ -63,6 +63,7 @@ class CheckerTicWidget : GlanceAppWidget() {
         val SELECTED_CATEGORY_KEY = longPreferencesKey("selected_category_id")
         val COMPLETING_TASK_ID_KEY = longPreferencesKey("completing_task_id")
         val COMPLETING_PHASE_KEY = intPreferencesKey("completing_phase")
+        val UPDATE_TICK_KEY = longPreferencesKey("update_tick")
         val TASK_ID_PARAM = ActionParameters.Key<Long>("task_id")
         val CATEGORY_ID_PARAM = ActionParameters.Key<Long>("category_id")
         val TAB_PARAM = ActionParameters.Key<String>("tab")
@@ -77,6 +78,7 @@ class CheckerTicWidget : GlanceAppWidget() {
             val selectedCategoryId = prefs[SELECTED_CATEGORY_KEY] ?: 0L
             val completingTaskId = prefs[COMPLETING_TASK_ID_KEY] ?: -1L
             val completingPhase = prefs[COMPLETING_PHASE_KEY] ?: 0
+            val updateTick = prefs[UPDATE_TICK_KEY] ?: 0L
 
             // Load categories
             val categories = runBlocking { db.categoryDao().getAllOrdered().first() }

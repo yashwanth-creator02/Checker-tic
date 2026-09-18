@@ -17,10 +17,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.leo.checkertic.data.AppDatabase
@@ -52,7 +57,13 @@ class QuickAddActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val type = intent.getStringExtra(EXTRA_TYPE) ?: "task"
-        val categoryId = intent.getLongExtra(EXTRA_CATEGORY_ID, -1L)
+        val rawCatId = intent.extras?.get(EXTRA_CATEGORY_ID)
+        val categoryId = when (rawCatId) {
+            is Long -> rawCatId
+            is Int -> rawCatId.toLong()
+            is String -> rawCatId.toLongOrNull() ?: -1L
+            else -> intent.getLongExtra(EXTRA_CATEGORY_ID, -1L)
+        }
 
         val db = AppDatabase.getInstance(applicationContext)
 
@@ -60,6 +71,25 @@ class QuickAddActivity : ComponentActivity() {
             CheckerTicTheme {
                 var text by remember { mutableStateOf("") }
                 var contentText by remember { mutableStateOf("") }
+                val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    focusRequester.requestFocus()
+                }
+
+                val performSave = {
+                    val trimmedTitle = text.trim()
+                    val trimmedContent = contentText.trim()
+                    if (type == "task") {
+                        if (trimmedTitle.isNotBlank()) {
+                            saveAndDismiss(type, trimmedTitle, "", categoryId, db)
+                        }
+                    } else {
+                        if (trimmedTitle.isNotBlank() || trimmedContent.isNotBlank()) {
+                            val finalTitle = trimmedTitle.ifEmpty { "Untitled" }
+                            saveAndDismiss(type, finalTitle, trimmedContent, categoryId, db)
+                        }
+                    }
+                }
 
                 Card(
                     modifier = Modifier
@@ -81,7 +111,15 @@ class QuickAddActivity : ComponentActivity() {
                                 Text(if (type == "task") "Task title" else "Note title")
                             },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = if (type == "task") ImeAction.Done else ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { performSave() }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester)
                         )
                         if (type == "note") {
                             Spacer(modifier = Modifier.height(10.dp))
@@ -102,22 +140,7 @@ class QuickAddActivity : ComponentActivity() {
                                 Text("Cancel")
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            TextButton(
-                                onClick = {
-                                    val trimmedTitle = text.trim()
-                                    val trimmedContent = contentText.trim()
-                                    if (type == "task") {
-                                        if (trimmedTitle.isNotBlank()) {
-                                            saveAndDismiss(type, trimmedTitle, "", categoryId, db)
-                                        }
-                                    } else {
-                                        if (trimmedTitle.isNotBlank() || trimmedContent.isNotBlank()) {
-                                            val finalTitle = trimmedTitle.ifEmpty { "Untitled" }
-                                            saveAndDismiss(type, finalTitle, trimmedContent, categoryId, db)
-                                        }
-                                    }
-                                }
-                            ) {
+                            TextButton(onClick = performSave) {
                                 Text("Save")
                             }
                         }
