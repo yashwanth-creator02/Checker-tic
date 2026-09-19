@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.leo.checkertic.data.entity.TaskCompletionEntity
 import com.leo.checkertic.data.entity.TaskEntity
@@ -36,6 +37,12 @@ interface TaskDao {
 
     @Insert
     suspend fun insertCompletion(completion: TaskCompletionEntity)
+
+    @Transaction
+    suspend fun completeTask(id: Long, completedAt: Long) {
+        setCompleted(id, true)
+        insertCompletion(TaskCompletionEntity(taskId = id, completedAt = completedAt))
+    }
 
     @Query("UPDATE tasks SET completed = 0 WHERE category_id = :categoryId")
     suspend fun resetCompletionsForCategory(categoryId: Long)

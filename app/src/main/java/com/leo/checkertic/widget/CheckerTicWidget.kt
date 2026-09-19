@@ -565,35 +565,6 @@ class SwitchCategoryAction : ActionCallback {
     }
 }
 
-private suspend fun completeTaskWithBlink(context: Context, glanceId: GlanceId, taskId: Long) {
-    val db = AppDatabase.getInstance(context)
-    val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
-    try {
-        // Phase 1: Blink ON (bright green card background, active green tickers & green text)
-        updateAppWidgetState(context, glanceId) { prefs ->
-            prefs[CheckerTicWidget.COMPLETING_TASK_ID_KEY] = taskId
-            prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 1
-        }
-        CheckerTicWidget().update(context, glanceId)
-        kotlinx.coroutines.delay(160)
-
-        // Phase 2: Blink OFF (dimmed background, faded tickers)
-        updateAppWidgetState(context, glanceId) { prefs ->
-            prefs[CheckerTicWidget.COMPLETING_PHASE_KEY] = 2
-        }
-        CheckerTicWidget().update(context, glanceId)
-        kotlinx.coroutines.delay(140)
-    } finally {
-        // Phase 3: Mark complete in DB and disappear from the widget
-        taskRepo.completeTask(taskId)
-        updateAppWidgetState(context, glanceId) { prefs ->
-            prefs.remove(CheckerTicWidget.COMPLETING_TASK_ID_KEY)
-            prefs.remove(CheckerTicWidget.COMPLETING_PHASE_KEY)
-        }
-        WidgetUpdater.update(context)
-    }
-}
-
 class ToggleTaskAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val taskId = parameters[CheckerTicWidget.TASK_ID_PARAM] ?: return
@@ -602,10 +573,10 @@ class ToggleTaskAction : ActionCallback {
         val task = db.taskDao().getById(taskId) ?: return
         if (task.completed) {
             taskRepo.uncompleteTask(taskId)
-            WidgetUpdater.update(context)
         } else {
-            completeTaskWithBlink(context, glanceId, taskId)
+            taskRepo.completeTask(taskId)
         }
+        WidgetUpdater.update(context)
     }
 }
 

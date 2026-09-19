@@ -152,7 +152,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleTask(task: TaskEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             if (task.completed) {
                 taskRepo.uncompleteTask(task.id)
             } else {

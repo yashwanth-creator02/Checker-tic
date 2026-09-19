@@ -107,16 +107,10 @@ class TaskRepository(
     }
 
     /**
-     * Marks a task as completed and logs a completion event.
+     * Marks a task as completed and logs a completion event in a single atomic transaction.
      */
     suspend fun completeTask(taskId: Long) {
-        taskDao.setCompleted(taskId, completed = true)
-        taskDao.insertCompletion(
-            TaskCompletionEntity(
-                taskId = taskId,
-                completedAt = System.currentTimeMillis()
-            )
-        )
+        taskDao.completeTask(taskId, System.currentTimeMillis())
     }
 
     /**
