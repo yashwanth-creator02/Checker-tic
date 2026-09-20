@@ -98,6 +98,7 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
             // you happened to select, so a widget-driven tick on an unvisited
             // list could act on last week's checkboxes.
             taskRepo.ensureAllRecurrenceResets()
+            ensureDefaultCategory()
         }
         viewModelScope.launch {
             categoryEntities.collect { list ->
@@ -402,15 +403,47 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
 
     fun lockVault() = Vault.lock()
 
+    private suspend fun ensureDefaultCategory() {
+        if (categoryRepo.getAllOnce().isEmpty()) {
+            val now = System.currentTimeMillis()
+            val id = categoryRepo.insert(
+                CategoryEntity(
+                    name = "General",
+                    orderIndex = 0,
+                    createdAt = now,
+                    updatedAt = now
+                )
+            )
+            _selectedCategoryId.value = id
+        }
+    }
+
     // ------------------------------------------------------------------
     // Task actions
     // ------------------------------------------------------------------
 
     fun addTask(title: String) {
-        val categoryId = _selectedCategoryId.value
-            ?: categoryEntities.value.firstOrNull()?.id
-            ?: return
-        launchAndRefresh { taskRepo.addTask(title, categoryId) }
+        launchAndRefresh {
+            var categoryId = _selectedCategoryId.value
+                ?: categoryEntities.value.firstOrNull()?.id
+            if (categoryId == null) {
+                val existing = categoryRepo.getAllOnce()
+                val target = existing.firstOrNull() ?: run {
+                    val now = System.currentTimeMillis()
+                    val cat = CategoryEntity(
+                        name = "General",
+                        orderIndex = 0,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                    val id = categoryRepo.insert(cat)
+                    cat.copy(id = id)
+                }
+                categoryId = target.id
+                _selectedCategoryId.value = target.id
+            }
+            taskRepo.addTask(title, categoryId)
+        }
     }
 
     fun toggleTask(taskId: Long, currentlyCompleted: Boolean) = launchAndRefresh {

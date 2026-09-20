@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.leo.checkertic.data.AppDatabase
+import com.leo.checkertic.data.entity.CategoryEntity
 import com.leo.checkertic.data.entity.NoteEntity
 import com.leo.checkertic.data.repository.NoteRepository
 import com.leo.checkertic.data.repository.TaskRepository
@@ -153,10 +154,21 @@ class QuickAddActivity : ComponentActivity() {
     private fun saveAndDismiss(type: String, text: String, content: String, categoryId: Long, db: AppDatabase) {
         runBlocking(Dispatchers.IO) {
             if (type == "task") {
-                val resolvedCatId = if (categoryId > 0) {
+                val resolvedCatId = if (categoryId > 0 && db.categoryDao().getById(categoryId) != null) {
                     categoryId
                 } else {
-                    db.categoryDao().getAllOrdered().first().firstOrNull()?.id ?: 1L
+                    val existing = db.categoryDao().getAllOnce()
+                    existing.firstOrNull()?.id ?: run {
+                        val now = System.currentTimeMillis()
+                        db.categoryDao().insert(
+                            CategoryEntity(
+                                name = "General",
+                                orderIndex = 0,
+                                createdAt = now,
+                                updatedAt = now
+                            )
+                        )
+                    }
                 }
                 val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
                 taskRepo.addTask(text, resolvedCatId)

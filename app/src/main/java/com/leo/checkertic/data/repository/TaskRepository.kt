@@ -4,6 +4,7 @@ import com.leo.checkertic.core.crypto.Vault
 import com.leo.checkertic.core.time.PeriodKeys
 import com.leo.checkertic.data.dao.CategoryDao
 import com.leo.checkertic.data.dao.TaskDao
+import com.leo.checkertic.data.entity.CategoryEntity
 import com.leo.checkertic.data.entity.TaskEntity
 import com.leo.checkertic.data.model.SearchScope
 import kotlinx.coroutines.Dispatchers
@@ -84,16 +85,27 @@ class TaskRepository(
      * locked category as plaintext.
      */
     suspend fun addTask(title: String, categoryId: Long): Long {
-        val category = categoryDao.getById(categoryId)
-        val locked = category?.locked == true
+        var targetCatId = categoryId
+        var category = categoryDao.getById(targetCatId)
+        if (category == null) {
+            val fallback = categoryDao.getAllOnce().firstOrNull() ?: run {
+                val now = System.currentTimeMillis()
+                val newCat = CategoryEntity(name = "General", orderIndex = 0, createdAt = now, updatedAt = now)
+                val newId = categoryDao.insert(newCat)
+                newCat.copy(id = newId)
+            }
+            targetCatId = fallback.id
+            category = fallback
+        }
+        val locked = category.locked
         val storedTitle = if (locked) Vault.seal(title) else title
-        val nextOrder = (taskDao.getTasksForCategoryOnce(categoryId)
+        val nextOrder = (taskDao.getTasksForCategoryOnce(targetCatId)
             .maxOfOrNull { it.orderIndex } ?: -1) + 1
         val now = System.currentTimeMillis()
         return taskDao.insert(
             TaskEntity(
                 title = storedTitle,
-                categoryId = categoryId,
+                categoryId = targetCatId,
                 encrypted = locked,
                 orderIndex = nextOrder,
                 createdAt = now,

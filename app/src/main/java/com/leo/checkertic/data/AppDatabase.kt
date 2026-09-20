@@ -185,6 +185,51 @@ abstract class AppDatabase : RoomDatabase() {
                     "checker_tic.db"
                 )
                     .addMigrations(MIGRATION_1_2)
+                    .addCallback(object : Callback() {
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
+                            runCatching {
+                                val now = System.currentTimeMillis()
+                                db.execSQL(
+                                    """
+                                    INSERT OR IGNORE INTO `categories` (
+                                        `id`, `name`, `order_index`, `recurrence_type`,
+                                        `recurrence_custom_days`, `last_period_key`,
+                                        `pinned`, `locked`, `background`, `sort_mode`,
+                                        `created_at`, `updated_at`
+                                    ) VALUES (
+                                        1, 'General', 0, 'once',
+                                        0, '',
+                                        0, 0, NULL, 'manual',
+                                        $now, $now
+                                    )
+                                    """.trimIndent()
+                                )
+                            }
+                        }
+
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
+                            runCatching {
+                                val now = System.currentTimeMillis()
+                                db.execSQL(
+                                    """
+                                    INSERT INTO `categories` (
+                                        `id`, `name`, `order_index`, `recurrence_type`,
+                                        `recurrence_custom_days`, `last_period_key`,
+                                        `pinned`, `locked`, `background`, `sort_mode`,
+                                        `created_at`, `updated_at`
+                                    ) SELECT
+                                        1, 'General', 0, 'once',
+                                        0, '',
+                                        0, 0, NULL, 'manual',
+                                        $now, $now
+                                    WHERE NOT EXISTS (SELECT 1 FROM `categories`)
+                                    """.trimIndent()
+                                )
+                            }
+                        }
+                    })
                     // WAL is Room's default on API 16+; stated explicitly so a
                     // future change here is a deliberate one. It is what lets
                     // the widget read while the app writes without blocking.
