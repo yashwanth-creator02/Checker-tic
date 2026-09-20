@@ -1,8 +1,10 @@
 package com.leo.checkertic.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -14,8 +16,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -430,6 +439,7 @@ fun StatTile(
 fun SectionCard(
     modifier: Modifier = Modifier,
     title: String? = null,
+    infoText: String? = null,
     trailing: @Composable (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -442,20 +452,31 @@ fun SectionCard(
             .background(colors.surface)
             .padding(spacing.lg)
     ) {
-        if (title != null || trailing != null) {
+        if (title != null || infoText != null || trailing != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (title != null) {
-                    Text(
-                        text = title,
-                        color = colors.textPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = title,
+                            color = colors.textPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (infoText != null) {
+                            Spacer(Modifier.width(spacing.xs))
+                            InfoDropdown(infoText = infoText)
+                        }
+                    }
                 } else {
+                    if (infoText != null) {
+                        InfoDropdown(infoText = infoText)
+                    }
                     Spacer(Modifier.weight(1f))
                 }
                 trailing?.invoke()
@@ -463,5 +484,50 @@ fun SectionCard(
             Spacer(Modifier.height(spacing.md))
         }
         content()
+    }
+}
+
+/**
+ * Clean anchored information popup for explaining analytics cards and visualizations.
+ */
+@Composable
+fun InfoDropdown(
+    infoText: String,
+    modifier: Modifier = Modifier
+) {
+    val colors = AppTheme.colors
+    val spacing = AppTheme.spacing
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        IconButton(
+            onClick = { expanded = !expanded },
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = "Show information",
+                tint = if (expanded) colors.accent else colors.textMuted,
+                modifier = Modifier.size(15.dp)
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(AppTheme.radius.md),
+            containerColor = colors.surfaceRaised,
+            border = BorderStroke(1.dp, colors.hairline),
+            modifier = Modifier
+                .widthIn(min = 220.dp, max = 290.dp)
+                .padding(spacing.sm)
+        ) {
+            Text(
+                text = infoText,
+                color = colors.textPrimary,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+                modifier = Modifier.padding(horizontal = spacing.xs, vertical = spacing.xs)
+            )
+        }
     }
 }

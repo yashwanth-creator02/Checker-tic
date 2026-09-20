@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -119,13 +120,20 @@ fun CategoryAnalyticsBlock(
                 shrinkVertically(AppTheme.motion.fastSpec())
         ) {
             Column {
-                SectionCard {
+                SectionCard(
+                    title = "Task activity",
+                    infoText = "Rolling completion activity and calendar view specifically for tasks in this category."
+                ) {
                     ModeToggle(mode = mode, onSelect = { mode = it })
                     Spacer(Modifier.height(spacing.md))
 
                     when (mode) {
                         HeatmapMode.ROLLING -> {
-                            Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                            val rollingScrollState = rememberScrollState()
+                            LaunchedEffect(analytics.rolling) {
+                                rollingScrollState.scrollTo(rollingScrollState.maxValue)
+                            }
+                            Box(modifier = Modifier.horizontalScroll(rollingScrollState)) {
                                 CalendarHeatmap(
                                     series = analytics.rolling,
                                     weekdayAligned = true,
@@ -158,11 +166,13 @@ fun CategoryAnalyticsBlock(
 
                 SectionCard(
                     title = "Last 30 days",
+                    infoText = "Daily completion volume over the last 30 days for this category, along with your streak records.",
                     trailing = {
                         Text(
                             text = "${analytics.trend.counts.sum()} done",
                             color = colors.textSecondary,
-                            fontSize = 11.sp
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
                         )
                     }
                 ) {
@@ -173,12 +183,14 @@ fun CategoryAnalyticsBlock(
                             text = "Longest run: ${analytics.streak.longest} ${analytics.streak.unit}",
                             color = colors.textMuted,
                             fontSize = 11.sp,
+                            lineHeight = 15.sp,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = "${analytics.totalInWindow} all-time in view",
                             color = colors.textMuted,
-                            fontSize = 11.sp
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
                         )
                     }
                 }

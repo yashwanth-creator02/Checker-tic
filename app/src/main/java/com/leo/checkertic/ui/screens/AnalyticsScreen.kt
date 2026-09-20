@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -120,7 +121,10 @@ fun AnalyticsScreen(
 
             // -- Headline stats --------------------------------------------
             item(key = "headline") {
-                SectionCard {
+                SectionCard(
+                    title = "Overview",
+                    infoText = "Key metrics for your selected timeframe: tasks completed today, your longest active streak, and overall completion rate."
+                ) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         StatTile(
                             value = state.completedToday.toString(),
@@ -165,9 +169,14 @@ fun AnalyticsScreen(
             item(key = "calendar") {
                 SectionCard(
                     title = "Completions",
+                    infoText = "Daily task completion activity. Darker copper squares indicate higher task volume. Tap any square to view the date and count.",
                     trailing = { HeatLegend() }
                 ) {
-                    Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    val calendarScrollState = rememberScrollState()
+                    LaunchedEffect(state.calendar) {
+                        calendarScrollState.scrollTo(calendarScrollState.maxValue)
+                    }
+                    Box(modifier = Modifier.horizontalScroll(calendarScrollState)) {
                         CalendarHeatmap(
                             series = state.calendar,
                             weekdayAligned = true,
@@ -179,19 +188,26 @@ fun AnalyticsScreen(
 
             // -- Time of day x day of week ---------------------------------
             item(key = "timeofday") {
-                SectionCard(title = "When you finish things") {
+                SectionCard(
+                    title = "When you finish things",
+                    infoText = "Productivity distribution across hours of the day (12 AM midnight to 11 PM) and days of the week. Darker squares highlight your peak productivity times."
+                ) {
                     TimeOfDayHeatmap(matrix = state.timeOfDay)
                 }
             }
 
             // -- Per-category streaks --------------------------------------
             item(key = "streaks") {
-                SectionCard(title = "Streaks") {
+                SectionCard(
+                    title = "Streaks",
+                    infoText = "Consecutive completion tracking per category, respecting each category's recurrence rule (daily, weekly, or custom intervals)."
+                ) {
                     if (state.categories.isEmpty()) {
                         Text(
                             text = "No categories yet.",
                             color = colors.textMuted,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
@@ -203,7 +219,10 @@ fun AnalyticsScreen(
 
             // -- Category comparison ---------------------------------------
             item(key = "comparison") {
-                SectionCard(title = "By category · ${window.label}") {
+                SectionCard(
+                    title = "By category · ${window.label}",
+                    infoText = "Breakdown of completed tasks across categories in the selected window. Tap any category bar to filter the whole screen."
+                ) {
                     CategoryComparisonChart(
                         stats = state.categories,
                         onCategoryClick = { id ->
@@ -215,13 +234,17 @@ fun AnalyticsScreen(
 
             // -- Notes activity --------------------------------------------
             item(key = "notes") {
-                SectionCard(title = "Notes activity") {
+                SectionCard(
+                    title = "Notes activity",
+                    infoText = "Timeline of notes created or edited over the selected timeframe, visualizing your documentation momentum."
+                ) {
                     SparklineChart(series = state.noteActivity)
                     Spacer(Modifier.height(spacing.sm))
                     Text(
                         text = "Notes created or edited over the last ${window.days} days.",
                         color = colors.textMuted,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
                     )
                 }
             }

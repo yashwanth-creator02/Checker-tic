@@ -142,9 +142,10 @@ fun SettingsScreen(
                         text = "Applies everywhere. Every colour in the app comes from one " +
                             "token set, so this switches the whole surface at once.",
                         color = colors.textSecondary,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
                     )
-                    Spacer(Modifier.height(spacing.md))
+                    Spacer(Modifier.height(spacing.sm))
                     listOf(
                         ThemeMode.DARK to "Dark (Obsidian)",
                         ThemeMode.LIGHT to "Light (Radiant)",
@@ -189,7 +190,8 @@ fun SettingsScreen(
                                 ?: "Locking isn't available on this device."
                         },
                         color = colors.textSecondary,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
                     )
                     if (Vault.hasKey() && Vault.isKeyInvalidated()) {
                         Spacer(Modifier.height(spacing.sm))
@@ -198,7 +200,8 @@ fun SettingsScreen(
                                 "which permanently invalidates the old key. Previously " +
                                 "locked content can no longer be decrypted.",
                             color = colors.danger,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
                         )
                     }
                     if (vaultUnlocked) {
@@ -222,7 +225,8 @@ fun SettingsScreen(
                                 "allow \"Alarms & reminders\" for Flip."
                         },
                         color = colors.textSecondary,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
                     )
                     if (!exactAlarms && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         Spacer(Modifier.height(spacing.sm))
@@ -239,7 +243,8 @@ fun SettingsScreen(
                         Text(
                             text = "Notifications are turned off, so reminders won't appear.",
                             color = colors.danger,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
                         )
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             OutlinedButton(onClick = {
@@ -258,7 +263,8 @@ fun SettingsScreen(
                             "voice note records and reminders — as a single file to a " +
                             "location you choose.",
                         color = colors.textSecondary,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
                     )
                     Spacer(Modifier.height(spacing.md))
                     Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
@@ -269,7 +275,7 @@ fun SettingsScreen(
                     }
                     statusMessage?.let {
                         Spacer(Modifier.height(spacing.sm))
-                        Text(text = it, color = colors.textSecondary, fontSize = 12.sp)
+                        Text(text = it, color = colors.textSecondary, fontSize = 12.sp, lineHeight = 16.sp)
                     }
                 }
             }
@@ -286,6 +292,7 @@ fun SettingsScreen(
                                 "on your home screen without opening the app.",
                             color = colors.textSecondary,
                             fontSize = 12.sp,
+                            lineHeight = 16.sp,
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(Modifier.width(spacing.md))
@@ -318,7 +325,8 @@ fun SettingsScreen(
                     Text(
                         text = "Active: $activeCount   ·   Completed: $completedCount",
                         color = colors.textSecondary,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
                     )
                     Spacer(Modifier.height(spacing.xs))
                     Text(
@@ -326,7 +334,8 @@ fun SettingsScreen(
                             "completion history — and therefore your streaks and heatmaps — " +
                             "is kept.",
                         color = colors.textMuted,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
                     )
                     Spacer(Modifier.height(spacing.md))
                     OutlinedButton(
@@ -356,14 +365,16 @@ fun SettingsScreen(
                                 text = "Flip v1.2.0",
                                 color = colors.textPrimary,
                                 fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 20.sp
                             )
                             Spacer(Modifier.height(spacing.xs))
                             Text(
                                 text = "Notes and tasks built around a Glance home-screen " +
                                     "widget, a Room database, and recurrence-aware analytics.",
                                 color = colors.textSecondary,
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
                             )
                         }
                     }
@@ -462,7 +473,8 @@ private fun BackupDialog(
                             "only you can reach; not for shared or cloud storage."
                     },
                     color = colors.textMuted,
-                    fontSize = 11.sp
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp
                 )
                 if (encrypt) {
                     TextField(
@@ -478,7 +490,8 @@ private fun BackupDialog(
                     text = "Content inside locked lists and notes stays encrypted with this " +
                         "device's hardware key, so it can only be read again on this device.",
                     color = colors.textMuted,
-                    fontSize = 11.sp
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp
                 )
             }
         },
@@ -554,13 +567,15 @@ private fun RestoreDialog(
                             text = "${p.tasks} tasks · ${p.notes} notes · " +
                                 "${p.completions} completions · ${p.categories} lists",
                             color = colors.textPrimary,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
                         )
                         Text(
                             text = "This replaces everything currently in Flip. It cannot " +
                                 "be undone.",
                             color = colors.danger,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
                         )
                     }
                 }
@@ -569,7 +584,8 @@ private fun RestoreDialog(
                     Text(
                         text = "This backup is encrypted.",
                         color = colors.textSecondary,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
                     )
                     TextField(
                         value = passphrase,

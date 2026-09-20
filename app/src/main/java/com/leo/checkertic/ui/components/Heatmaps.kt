@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +31,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,7 +127,7 @@ fun CalendarHeatmap(
     val gridWidth = cellSize * columns + cellGap * (columns - 1).coerceAtLeast(0)
     val gutterWidth = 20.dp
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier.padding(end = 24.dp)) {
         if (showMonthLabels) {
             MonthLabelRow(
                 series = series,
@@ -308,26 +311,29 @@ private fun MonthLabelRow(
         out
     }
 
-    Row(modifier = Modifier.padding(start = startPadding)) {
+    Row(
+        modifier = Modifier
+            .padding(start = startPadding)
+            .height(18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         for (column in 0 until columns) {
             Box(
-                modifier = Modifier.width(cellSize + if (column < columns - 1) cellGap else 0.dp),
+                modifier = Modifier
+                    .width(cellSize + if (column < columns - 1) cellGap else 0.dp)
+                    .fillMaxHeight(),
                 contentAlignment = Alignment.CenterStart
             ) {
                 labels[column]?.let {
                     Text(
                         text = it,
                         color = colors.textSecondary,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
-                        lineHeight = 9.sp,
-                        style = TextStyle(
-                            platformStyle = PlatformTextStyle(
-                                includeFontPadding = false
-                            )
-                        ),
+                        lineHeight = 14.sp,
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        modifier = Modifier.wrapContentSize(align = Alignment.CenterStart, unbounded = true)
                     )
                 }
             }
@@ -452,34 +458,75 @@ fun TimeOfDayHeatmap(
                 .padding(start = yAxisWidth + AppTheme.spacing.xs)
                 .fillMaxWidth()
         ) {
-            listOf("12a", "6a", "12p", "6p", "11p").forEachIndexed { index, label ->
-                Text(
-                    text = label,
-                    color = colors.textSecondary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(if (index == 4) 0.5f else 1f)
-                )
-            }
+            Text(
+                text = "12 AM",
+                color = colors.textSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Start,
+                modifier = Modifier.weight(6f)
+            )
+            Text(
+                text = "6 AM",
+                color = colors.textSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(6f)
+            )
+            Text(
+                text = "12 PM",
+                color = colors.textSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(6f)
+            )
+            Text(
+                text = "6 PM",
+                color = colors.textSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(5f)
+            )
+            Text(
+                text = "11 PM",
+                color = colors.textSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.End
+            )
         }
 
+        Spacer(Modifier.height(AppTheme.spacing.xs + 2.dp))
+        Text(
+            text = "Hours of the day (12 AM midnight to 11 PM)",
+            color = colors.textMuted,
+            fontSize = 11.sp,
+            lineHeight = 15.sp,
+            modifier = Modifier.padding(start = yAxisWidth + AppTheme.spacing.xs)
+        )
+
         matrix.peak()?.let { (day, hour) ->
-            Spacer(Modifier.height(AppTheme.spacing.sm))
+            Spacer(Modifier.height(AppTheme.spacing.xs))
             Text(
                 text = "Busiest: ${dayLabels[day]} around ${formatHour(hour)}",
                 color = colors.textSecondary,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                lineHeight = 16.sp,
+                modifier = Modifier.padding(start = yAxisWidth + AppTheme.spacing.xs)
             )
         }
     }
 }
 
 private fun formatHour(hour: Int): String = when {
-    hour == 0 -> "12am"
-    hour < 12 -> "${hour}am"
-    hour == 12 -> "12pm"
-    else -> "${hour - 12}pm"
+    hour == 0 -> "12 AM (Midnight)"
+    hour < 12 -> "$hour AM"
+    hour == 12 -> "12 PM (Noon)"
+    else -> "${hour - 12} PM"
 }
 
 /** The ramp legend. Shared by both heatmaps so they can never disagree. */

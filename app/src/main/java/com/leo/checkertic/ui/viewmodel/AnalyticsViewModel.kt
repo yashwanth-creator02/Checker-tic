@@ -80,10 +80,22 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
                 val windowStart = today.minusDays((window.days - 1).toLong())
                 val windowStartMillis = windowStart.atStartOfDay(zone).toInstant().toEpochMilli()
 
-                val calendar = AnalyticsEngine.dailySeries(
+                val windowSeries = AnalyticsEngine.dailySeries(
                     points = points,
                     startDate = windowStart,
                     days = window.days,
+                    zone = zone,
+                    categoryFilter = filter
+                )
+
+                // Calendar heatmap displays a full rolling year (52 weeks = 364 days)
+                // so the user has a rich, complete habit history rather than an incomplete fragment.
+                val rollingHeatmapDays = 364
+                val heatmapStart = today.minusDays((rollingHeatmapDays - 1).toLong())
+                val calendar = AnalyticsEngine.dailySeries(
+                    points = points,
+                    startDate = heatmapStart,
+                    days = rollingHeatmapDays,
                     zone = zone,
                     categoryFilter = filter
                 )
@@ -120,8 +132,8 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
                     bestCurrentStreak = best?.streak?.current ?: 0,
                     bestCurrentStreakCategory = best?.name,
                     bestStreakUnit = best?.streak?.unit ?: "days",
-                    completionRate = AnalyticsEngine.completionRate(calendar),
-                    totalInWindow = calendar.counts.sum(),
+                    completionRate = AnalyticsEngine.completionRate(windowSeries),
+                    totalInWindow = windowSeries.counts.sum(),
                     calendar = calendar,
                     timeOfDay = AnalyticsEngine.timeOfDayMatrix(
                         points = points,
