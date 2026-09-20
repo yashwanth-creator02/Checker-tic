@@ -1,7 +1,14 @@
 package com.leo.checkertic.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,29 +24,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -49,31 +48,68 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
 import com.leo.checkertic.R
+import com.leo.checkertic.core.crypto.Vault
+import com.leo.checkertic.core.share.ShareExport
+import com.leo.checkertic.data.entity.ReminderEntity
+import com.leo.checkertic.ui.components.BackgroundSurface
+import com.leo.checkertic.ui.components.CategoryAnalyticsBlock
+import com.leo.checkertic.ui.components.CompletedRevealBar
+import com.leo.checkertic.ui.components.InlineSearchBar
+import com.leo.checkertic.ui.components.LockedPanel
+import com.leo.checkertic.ui.components.SortMenuButton
 import com.leo.checkertic.ui.components.TaskItem
-import com.leo.checkertic.ui.theme.FabBackgroundDark
-import com.leo.checkertic.ui.theme.FabIconBlue
-import com.leo.checkertic.ui.theme.NavyContainer
-import com.leo.checkertic.ui.theme.SkyBlueText
+import com.leo.checkertic.ui.components.rememberVaultUnlock
+import com.leo.checkertic.ui.theme.AppTheme
+import com.leo.checkertic.ui.theme.GlassTopBoundary
+import com.leo.checkertic.ui.viewmodel.CategoryUi
+import com.leo.checkertic.ui.viewmodel.TaskUi
 import com.leo.checkertic.ui.viewmodel.TasksViewModel
+import kotlinx.coroutines.launch
 
+/**
+ * ============================================================================
+ *  TASKS SCREEN
+ * ============================================================================
+ *
+ * Carries features 2, 3, 4, 5, 6, 7, 8 and 10 on one surface.
+ *
+ * ## The single-scroll structure
+ *
+ * Everything below the category strip lives in one `LazyColumn`: active
+ * tasks, the completed reveal, the revealed history, and the inline analytics
+ * block. Nesting a scrollable analytics section inside a scrollable task list
+ * would be both a gesture conflict and a measurement error (Compose cannot
+ * measure an unbounded-height child inside an unbounded-height parent), so
+ * the sections are items in the same list instead. That is also why
+ * analytics disposes naturally when it scrolls away.
+ *
+ * ## Why state here is minimal
+ *
+ * The only things this file remembers are genuinely ephemeral UI state:
+ * whether the completed section is open, which sheet is showing, what is
+ * typed into a dialog. Every piece of data, including the decrypted titles
+ * and the sorted order, arrives pre-computed from the ViewModel. No
+ * filtering, sorting or decryption happens during composition.
+ */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TasksScreen(
@@ -81,419 +117,480 @@ fun TasksScreen(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val categories by viewModel.categories.collectAsState()
-    val selectedCategoryId by viewModel.selectedCategoryId.collectAsState()
-    val tasks by viewModel.tasks.collectAsState()
+    val state by viewModel.uiState.collectAsState()
+    val analytics by viewModel.categoryAnalytics.collectAsState()
+    val inlineMonth by viewModel.inlineMonth.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchScope by viewModel.searchScope.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
 
-    var showAddTaskDialog by remember { mutableStateOf(false) }
-    var showCategoryManagerDialog by remember { mutableStateOf(false) }
-    var categoryToRename by remember { mutableStateOf<com.leo.checkertic.data.entity.CategoryEntity?>(null) }
-    var categoryToDelete by remember { mutableStateOf<com.leo.checkertic.data.entity.CategoryEntity?>(null) }
-    var renameText by remember { mutableStateOf("") }
-    var newCategoryName by remember { mutableStateOf("") }
+    val colors = AppTheme.colors
+    val spacing = AppTheme.spacing
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val unlock = rememberVaultUnlock()
 
-    // Auto-select first category if none selected
-    LaunchedEffect(categories) {
-        if (selectedCategoryId == null && categories.isNotEmpty()) {
-            viewModel.selectCategory(categories.first().id)
-        }
-    }
+    var searching by remember { mutableStateOf(false) }
+    var completedExpanded by remember(state.selected?.id) { mutableStateOf(false) }
+    var showAddTask by remember { mutableStateOf(false) }
+    var taskSheet by remember { mutableStateOf<TaskUi?>(null) }
+    var categorySheet by remember { mutableStateOf<CategoryUi?>(null) }
+    var renameTarget by remember { mutableStateOf<TaskUi?>(null) }
+
+    val listState = rememberLazyListState()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            GlassTopBoundary {
+                Column {
+                    TopAppBar(
+                        title = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.sm + 2.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_flip_logo),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                                Text("Flip", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { searching = !searching }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Search,
+                                    contentDescription = "Search",
+                                    tint = colors.textPrimary
+                                )
+                            }
+                            state.selected?.let { category ->
+                                SortMenuButton(
+                                    current = category.sortMode,
+                                    onSelect = { viewModel.setCategorySort(category.id, it) }
+                                )
+                            }
+                            IconButton(onClick = onOpenSettings) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Tune,
+                                    contentDescription = "Category settings",
+                                    tint = colors.textPrimary
+                                )
+                            }
+                        },
+                        // Transparent so the glass boundary behind it shows
+                        // through; the bar itself must not paint a second
+                        // opaque layer on top of it.
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            titleContentColor = colors.textPrimary,
+                            actionIconContentColor = colors.textPrimary
+                        )
+                    )
+
+                    AnimatedVisibility(
+                        visible = searching,
+                        enter = fadeIn(AppTheme.motion.fastSpec()) +
+                            expandVertically(AppTheme.motion.normalSpec()),
+                        exit = fadeOut(AppTheme.motion.fastSpec()) +
+                            shrinkVertically(AppTheme.motion.fastSpec())
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_flip_logo),
-                            contentDescription = "Flip Logo",
-                            modifier = Modifier.size(26.dp)
-                        )
-                        Text(
-                            text = "Flip",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Outlined.Tune,
-                            contentDescription = "Screen Settings",
-                            tint = MaterialTheme.colorScheme.onBackground
+                        InlineSearchBar(
+                            query = searchQuery,
+                            onQueryChange = viewModel::setSearchQuery,
+                            onClose = {
+                                searching = false
+                                viewModel.clearSearch()
+                            },
+                            scope = searchScope,
+                            onToggleScope = viewModel::toggleSearchScope,
+                            placeholder = "Search tasks and notes"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    actionIconContentColor = MaterialTheme.colorScheme.onBackground
-                )
-            )
+                }
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddTaskDialog = true },
-                shape = CircleShape,
-                containerColor = FabBackgroundDark,
-                contentColor = FabIconBlue,
-                modifier = Modifier
-                    .padding(end = 8.dp, bottom = 8.dp)
-                    .size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add task",
-                    tint = FabIconBlue,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Category Filter Pills Row + Manage Button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
+            if (!searching && !state.needsUnlock) {
+                FloatingActionButton(
+                    onClick = { showAddTask = true },
+                    shape = CircleShape,
+                    containerColor = colors.accentContainer,
+                    contentColor = colors.onAccentContainer,
                     modifier = Modifier
-                        .weight(1f)
-                        .horizontalScroll(rememberScrollState()),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    categories.forEach { category ->
-                        val isSelected = category.id == selectedCategoryId
-                        Box(
-                            modifier = (if (isSelected) {
-                                Modifier
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(NavyContainer)
-                            } else {
-                                Modifier.clip(RoundedCornerShape(14.dp))
-                            })
-                                .combinedClickable(
-                                    onClick = { viewModel.selectCategory(category.id) },
-                                    onLongClick = {
-                                        categoryToRename = category
-                                        renameText = category.name
-                                    }
-                                )
-                                .padding(horizontal = 14.dp, vertical = 6.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = category.name,
-                                color = if (isSelected) SkyBlueText else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(6.dp))
-                    }
-                }
-
-                IconButton(
-                    onClick = { showCategoryManagerDialog = true },
-                    modifier = Modifier.size(32.dp)
+                        .padding(end = spacing.sm, bottom = spacing.sm)
+                        .size(AppTheme.sizes.fab)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = "Manage Categories",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add task",
+                        modifier = Modifier.size(AppTheme.sizes.iconLg)
                     )
                 }
             }
+        },
+        containerColor = colors.root,
+        modifier = modifier
+    ) { innerPadding ->
 
-            // Task items list
-            if (tasks.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 60.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (categories.isEmpty()) "Add a category via settings" else "All tasks done",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 14.sp
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(tasks, key = { it.id }) { task ->
-                        TaskItem(
-                            task = task,
-                            onToggle = { viewModel.toggleTask(task) },
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = null,
-                                placementSpec = androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                                fadeOutSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                            )
-                        )
-                    }
-                    // Bottom spacer for FAB clearance
-                    item {
-                        Spacer(modifier = Modifier.height(72.dp))
-                    }
-                }
-            }
-        }
-    }
+        BackgroundSurface(
+            reference = state.selected?.background,
+            target = com.leo.checkertic.core.image.ImageStore.Target.FULL,
+            fallback = colors.root,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
 
-    // Add Task Dialog
-    if (showAddTaskDialog) {
-        var title by remember { mutableStateOf("") }
-        val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-        LaunchedEffect(Unit) {
-            focusRequester.requestFocus()
-        }
-        val submitTask = {
-            val trimmed = title.trim()
-            if (trimmed.isNotEmpty()) {
-                viewModel.addTask(trimmed)
-            }
-            showAddTaskDialog = false
-        }
-
-        AlertDialog(
-            onDismissRequest = { showAddTaskDialog = false },
-            title = { Text("New Task") },
-            text = {
-                TextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = { Text("Task title") },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { submitTask() }),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester)
+                CategoryStrip(
+                    categories = state.categories,
+                    selectedId = state.selected?.id,
+                    onSelect = viewModel::selectCategory,
+                    onLongPress = { categorySheet = it }
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = submitTask) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddTaskDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 
-    // Manage Categories Dialog
-    if (showCategoryManagerDialog) {
-        AlertDialog(
-            onDismissRequest = { showCategoryManagerDialog = false },
-            title = {
-                Text(text = "Manage Categories", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Add new category row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        TextField(
-                            value = newCategoryName,
-                            onValueChange = { newCategoryName = it },
-                            placeholder = { Text("New category...", fontSize = 13.sp) },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
+                when {
+                    searching && searchQuery.isNotBlank() -> {
+                        SearchResultsList(
+                            results = searchResults,
+                            onTaskClick = { hit ->
+                                viewModel.selectCategory(hit.task.categoryId)
+                                searching = false
+                                viewModel.clearSearch()
+                            }
                         )
-                        IconButton(
-                            onClick = {
-                                if (newCategoryName.isNotBlank()) {
-                                    viewModel.addCategory(newCategoryName.trim())
-                                    newCategoryName = ""
-                                }
-                            },
-                            enabled = newCategoryName.isNotBlank()
-                        ) {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = "Add Category")
-                        }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    state.needsUnlock -> {
+                        LockedPanel(
+                            title = "${state.selected?.name.orEmpty()} is locked",
+                            subtitle = "Everything in this list is encrypted on this device. " +
+                                "Unlock to read or change it.",
+                            actionLabel = "Unlock",
+                            onAction = { unlock("Unlock this list") { } },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
-                    // Reorder, Rename, Delete List
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        itemsIndexed(categories, key = { _, cat -> cat.id }) { index, category ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Move Up
-                                IconButton(
-                                    onClick = { viewModel.moveCategory(category, -1) },
-                                    enabled = index > 0,
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "Move Up",
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                    else -> {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = spacing.screenGutter,
+                                end = spacing.screenGutter,
+                                top = spacing.sm,
+                                bottom = spacing.fabClearance
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(spacing.md)
+                        ) {
+
+                            if (state.active.isEmpty() && !state.hasCompleted) {
+                                item(key = "empty") {
+                                    EmptyState(hasCategories = state.categories.isNotEmpty())
                                 }
+                            }
 
-                                // Move Down
-                                IconButton(
-                                    onClick = { viewModel.moveCategory(category, 1) },
-                                    enabled = index < categories.size - 1,
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Move Down",
-                                        modifier = Modifier.size(20.dp)
+                            // Stable keys plus a contentType, so Compose reuses
+                            // a task row for a task row and never tries to
+                            // reuse one for the analytics block.
+                            items(
+                                items = state.active,
+                                key = { it.id },
+                                contentType = { "task" }
+                            ) { task ->
+                                TaskItem(
+                                    task = task,
+                                    onToggle = { viewModel.toggleTask(task.id, task.completed) },
+                                    onLongPress = { taskSheet = task },
+                                    modifier = Modifier.animateItem(
+                                        fadeInSpec = null,
+                                        placementSpec = AppTheme.motion.placementSpec(),
+                                        fadeOutSpec = AppTheme.motion.fastSpec()
                                     )
-                                }
-
-                                Text(
-                                    text = category.name,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(horizontal = 6.dp),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
                                 )
+                            }
 
-                                // Rename
-                                IconButton(
-                                    onClick = {
-                                        categoryToRename = category
-                                        renameText = category.name
-                                    },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Edit,
-                                        contentDescription = "Rename",
-                                        modifier = Modifier.size(16.dp)
+                            if (state.hasCompleted) {
+                                item(key = "completed-bar", contentType = "reveal") {
+                                    CompletedRevealBar(
+                                        count = state.completed.size,
+                                        expanded = completedExpanded,
+                                        onToggle = { completedExpanded = !completedExpanded },
+                                        modifier = Modifier.animateItem(
+                                            placementSpec = AppTheme.motion.placementSpec()
+                                        )
                                     )
                                 }
 
-                                // Delete (only if > 1 category remains)
-                                IconButton(
-                                    onClick = { categoryToDelete = category },
-                                    enabled = categories.size > 1,
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Delete,
-                                        contentDescription = "Delete",
-                                        tint = if (categories.size > 1) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                if (completedExpanded) {
+                                    items(
+                                        items = state.completed,
+                                        key = { "done-${it.id}" },
+                                        contentType = { "task" }
+                                    ) { task ->
+                                        TaskItem(
+                                            task = task,
+                                            onToggle = {
+                                                viewModel.toggleTask(task.id, task.completed)
+                                            },
+                                            onLongPress = { taskSheet = task },
+                                            modifier = Modifier.animateItem(
+                                                placementSpec = AppTheme.motion.placementSpec()
+                                            )
+                                        )
+                                    }
+                                    item(key = "clear-completed") {
+                                        TextButton(
+                                            onClick = viewModel::clearCompletedTasks,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Clear completed", fontSize = 12.sp)
+                                        }
+                                    }
                                 }
+                            }
+
+                            item(key = "analytics", contentType = "analytics") {
+                                Spacer(Modifier.height(spacing.sm))
+                                CategoryAnalyticsBlock(
+                                    analytics = analytics,
+                                    month = inlineMonth,
+                                    onStepMonth = viewModel::stepInlineMonth
+                                )
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Dialogs and sheets
+    // ------------------------------------------------------------------
+
+    if (showAddTask) {
+        AddTaskDialog(
+            onDismiss = { showAddTask = false },
+            onAdd = { title ->
+                viewModel.addTask(title)
+                showAddTask = false
+            }
+        )
+    }
+
+    taskSheet?.let { task ->
+        TaskActionsSheet(
+            task = task,
+            onDismiss = { taskSheet = null },
+            onTogglePin = {
+                viewModel.toggleTaskPinned(task.id)
+                taskSheet = null
             },
-            confirmButton = {
-                TextButton(onClick = { showCategoryManagerDialog = false }) {
-                    Text("Done")
+            onRename = {
+                renameTarget = task
+                taskSheet = null
+            },
+            onShare = {
+                ShareExport.shareText(context, "${if (task.completed) "[x]" else "[ ]"} ${task.title}")
+                taskSheet = null
+            },
+            onCopy = {
+                ShareExport.copyToClipboard(context, "Task", task.title)
+                taskSheet = null
+            },
+            onDelete = {
+                viewModel.deleteTask(task.id)
+                taskSheet = null
+            }
+        )
+    }
+
+    categorySheet?.let { category ->
+        CategoryActionsSheet(
+            category = category,
+            onDismiss = { categorySheet = null },
+            onTogglePin = {
+                viewModel.toggleCategoryPinned(category.id)
+                categorySheet = null
+            },
+            onToggleLock = {
+                val target = !category.locked
+                unlock(
+                    if (target) "Confirm to lock this list" else "Unlock this list"
+                ) { authenticated ->
+                    if (authenticated) {
+                        viewModel.setCategoryLocked(category.id, target) { }
+                    }
+                }
+                categorySheet = null
+            },
+            onShare = {
+                scope.launch {
+                    val text = buildString {
+                        appendLine("# ${category.name}")
+                        appendLine()
+                        state.active.forEach { appendLine("- [ ] ${it.title}") }
+                        state.completed.forEach { appendLine("- [x] ${it.title}") }
+                    }.trimEnd()
+                    ShareExport.shareText(context, text, category.name)
+                }
+                categorySheet = null
+            },
+            onSetBackground = { reference ->
+                viewModel.setCategoryBackground(category.id, reference)
+            },
+            onPickBackground = { uri ->
+                scope.launch {
+                    com.leo.checkertic.core.image.ImageStore
+                        .importFromPicker(context, uri)
+                        ?.let { viewModel.setCategoryBackground(category.id, it) }
                 }
             }
         )
     }
 
-    // Rename Category Dialog
-    if (categoryToRename != null) {
-        AlertDialog(
-            onDismissRequest = { categoryToRename = null },
-            title = { Text("Rename Category") },
-            text = {
-                TextField(
-                    value = renameText,
-                    onValueChange = { renameText = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+    renameTarget?.let { task ->
+        RenameDialog(
+            initial = task.title,
+            title = "Rename task",
+            onDismiss = { renameTarget = null },
+            onConfirm = { newTitle ->
+                viewModel.renameTask(task.id, newTitle)
+                renameTarget = null
+            }
+        )
+    }
+}
+
+// ----------------------------------------------------------------------
+// Pieces
+// ----------------------------------------------------------------------
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CategoryStrip(
+    categories: List<CategoryUi>,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit,
+    onLongPress: (CategoryUi) -> Unit
+) {
+    val colors = AppTheme.colors
+    val spacing = AppTheme.spacing
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = spacing.screenGutter, vertical = spacing.xs + 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        categories.forEach { category ->
+            val selected = category.id == selectedId
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(AppTheme.radius.lg - 2.dp))
+                    .background(if (selected) colors.accentContainer else Color.Transparent)
+                    .combinedClickable(
+                        onClick = { onSelect(category.id) },
+                        onLongClick = { onLongPress(category) }
+                    )
+                    .padding(horizontal = spacing.md + 2.dp, vertical = spacing.sm - 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (category.locked) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lock,
+                        contentDescription = "Locked",
+                        tint = if (selected) colors.onAccentContainer else colors.textSecondary,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Spacer(Modifier.width(spacing.xs))
+                }
+                Text(
+                    text = category.name,
+                    color = if (selected) colors.onAccentContainer else colors.textSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal
                 )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val trimmed = renameText.trim()
-                        if (trimmed.isNotBlank()) {
-                            categoryToRename?.let { viewModel.renameCategory(it, trimmed) }
-                            categoryToRename = null
-                        }
-                    },
-                    enabled = renameText.isNotBlank()
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { categoryToRename = null }) {
-                    Text("Cancel")
-                }
             }
+            Spacer(Modifier.width(spacing.xs + 2.dp))
+        }
+    }
+}
+
+@Composable
+private fun EmptyState(hasCategories: Boolean) {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(160.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (hasCategories) "All clear" else "Add a category to get started",
+            color = AppTheme.colors.textMuted,
+            fontSize = 14.sp
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddTaskDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+    var title by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    val submit = {
+        val trimmed = title.trim()
+        if (trimmed.isNotEmpty()) onAdd(trimmed) else onDismiss()
     }
 
-    // Delete Category Confirmation Dialog
-    if (categoryToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { categoryToDelete = null },
-            title = { Text("Delete Category?") },
-            text = {
-                Text("Are you sure you want to delete '${categoryToDelete?.name}' and all its tasks?")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        categoryToDelete?.let { viewModel.deleteCategory(it) }
-                        categoryToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { categoryToDelete = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New task") },
+        text = {
+            TextField(
+                value = title,
+                onValueChange = { title = it },
+                placeholder = { Text("Task title") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester)
+            )
+        },
+        confirmButton = { TextButton(onClick = submit) { Text("Add") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RenameDialog(
+    initial: String,
+    title: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(text.trim()) },
+                enabled = text.isNotBlank()
+            ) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }

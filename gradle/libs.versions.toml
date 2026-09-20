@@ -14,8 +14,10 @@ workManager = "2.9.0"
 navigationCompose = "2.7.7"
 lifecycleViewmodelCompose = "2.8.2"
 ksp = "2.2.10-2.0.2"
+biometric = "1.1.0"
 
 [libraries]
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

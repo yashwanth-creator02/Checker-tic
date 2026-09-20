@@ -1,13 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 11 and below (full-backup).
+
+    The Room database and background images are backed up. The vault key is
+    non-exportable and lives in the hardware keystore, so encrypted content
+    restored onto a different device would be unreadable; that is correct and
+    intended, and the in-app backup is the supported way to move devices.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <include domain="database" path="." />
+    <include domain="file" path="backgrounds/" />
+    <include domain="sharedpref" path="checker_tic_prefs.xml" />
+    <exclude domain="file" path="voice/" />
 </full-backup-content>

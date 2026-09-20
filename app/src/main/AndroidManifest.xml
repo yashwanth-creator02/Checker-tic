@@ -2,6 +2,43 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+        Notifications for reminders. Runtime-requested on Android 13+; the
+        Settings screen surfaces the state and the request.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        Exact alarms.
+
+        SCHEDULE_EXACT_ALARM, not USE_EXACT_ALARM. USE_EXACT_ALARM is granted
+        at install but is Play-restricted to apps whose core function is an
+        alarm clock, a timer, or a calendar showing event notifications; Flip
+        is a task app and declaring it would put the listing at risk.
+
+        SCHEDULE_EXACT_ALARM is denied by default on Android 14+, so
+        ReminderScheduler checks canScheduleExactAlarms() and degrades to
+        setAndAllowWhileIdle rather than throwing. Reminders still arrive
+        without it, just not to the second.
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Re-arm alarms after a reboot; app updates are handled separately. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Voice notes. Runtime-requested at the moment of first recording. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+        No storage permission anywhere. Background images come from the system
+        Photo Picker, which grants access to exactly the chosen image, and
+        backups go through the Storage Access Framework.
+    -->
+
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -51,6 +88,48 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
+
+        <!--
+            Reminder delivery. Not exported: only AlarmManager, which holds
+            the PendingIntent this app created, can trigger it.
+        -->
+        <receiver
+            android:name=".reminders.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.leo.checkertic.action.REMINDER_FIRE" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            Re-arms alarms. MY_PACKAGE_REPLACED matters as much as
+            BOOT_COMPLETED: an app update also clears pending alarms, and
+            without it every user silently loses their reminders on update.
+        -->
+        <receiver
+            android:name=".reminders.BootReceiver"
+            android:exported="true"
+            android:directBootAware="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            Grants scoped, temporary read access to exported note files rather
+            than handing out a file:// URI, which has thrown
+            FileUriExposedException since Android 7.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

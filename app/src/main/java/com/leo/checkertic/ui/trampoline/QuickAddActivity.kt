@@ -161,7 +161,7 @@ class QuickAddActivity : ComponentActivity() {
                 val taskRepo = TaskRepository(db.taskDao(), db.categoryDao())
                 taskRepo.addTask(text, resolvedCatId)
             } else {
-                val noteRepo = NoteRepository(db.noteDao())
+                val noteRepo = NoteRepository(db.noteDao(), db.voiceNoteDao())
                 noteRepo.insert(
                     NoteEntity(
                         title = text,

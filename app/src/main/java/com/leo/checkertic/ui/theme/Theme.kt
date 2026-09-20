@@ -5,46 +5,62 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 
 enum class ThemeMode {
     SYSTEM, DARK, LIGHT
 }
 
-private val DarkColorScheme = darkColorScheme(
-    primary = ElectricBlue,
-    onPrimary = Color.White,
-    primaryContainer = NavyContainer,
-    onPrimaryContainer = SkyBlueText,
-    secondary = ElectricBlue,
-    onSecondary = Color.White,
-    tertiary = CompletionGreen,
-    background = ObsidianRoot,
-    onBackground = TextPrimaryDark,
-    surface = DarkSurfaceCard,
-    onSurface = TextPrimaryDark,
-    surfaceVariant = SubtleGrayLine,
-    onSurfaceVariant = TextSecondaryDark,
-    error = AccentRed
-)
+private fun materialSchemeFor(c: AppColors) = if (c.isDark) {
+    darkColorScheme(
+        primary = c.accent,
+        onPrimary = Color.White,
+        primaryContainer = c.accentContainer,
+        onPrimaryContainer = c.onAccentContainer,
+        secondary = c.accent,
+        onSecondary = Color.White,
+        tertiary = c.success,
+        background = c.root,
+        onBackground = c.textPrimary,
+        surface = c.surface,
+        onSurface = c.textPrimary,
+        surfaceVariant = c.surfaceRaised,
+        onSurfaceVariant = c.textSecondary,
+        outline = c.hairline,
+        scrim = c.scrim,
+        error = c.danger
+    )
+} else {
+    lightColorScheme(
+        primary = c.accent,
+        onPrimary = Color.White,
+        primaryContainer = c.accentContainer,
+        onPrimaryContainer = c.onAccentContainer,
+        secondary = c.accent,
+        onSecondary = Color.White,
+        tertiary = c.success,
+        background = c.root,
+        onBackground = c.textPrimary,
+        surface = c.surface,
+        onSurface = c.textPrimary,
+        surfaceVariant = c.surfaceRaised,
+        onSurfaceVariant = c.textSecondary,
+        outline = c.hairline,
+        scrim = c.scrim,
+        error = c.danger
+    )
+}
 
-private val LightColorScheme = lightColorScheme(
-    primary = LightElectricBlue,
-    onPrimary = Color.White,
-    primaryContainer = LightNavyContainer,
-    onPrimaryContainer = LightSkyBlueText,
-    secondary = LightElectricBlue,
-    onSecondary = Color.White,
-    tertiary = CompletionGreen,
-    background = LightRoot,
-    onBackground = TextPrimaryLight,
-    surface = LightSurfaceCard,
-    onSurface = TextPrimaryLight,
-    surfaceVariant = SubtleGrayLineLight,
-    onSurfaceVariant = TextSecondaryLight,
-    error = AccentRed
-)
-
+/**
+ * The app theme.
+ *
+ * Provides both the Material 3 scheme (so stock M3 components look right) and
+ * the richer [AppTheme] token set, which app code should prefer. The Material
+ * scheme is derived from the tokens and never the other way round, so there is
+ * exactly one place to change a colour.
+ */
 @Composable
 fun CheckerTicTheme(
     themeMode: ThemeMode = ThemeMode.DARK,
@@ -56,11 +72,20 @@ fun CheckerTicTheme(
         ThemeMode.LIGHT -> false
     }
 
-    val colorScheme = if (isDark) DarkColorScheme else LightColorScheme
+    val colors = appColorsFor(isDark)
+    val scheme = remember(isDark) { materialSchemeFor(colors) }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalAppColors provides colors,
+        LocalAppSpacing provides AppSpacing(),
+        LocalAppRadius provides AppRadius(),
+        LocalAppSizes provides AppSizes(),
+        LocalAppMotion provides AppMotion()
+    ) {
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

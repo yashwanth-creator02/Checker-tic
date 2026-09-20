@@ -56,6 +56,9 @@ import com.leo.checkertic.ui.trampoline.QuickAddActivity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
+/** Stand-in shown on the home screen for content the widget can't decrypt. */
+private const val LOCKED_MASK = "\u2022\u2022\u2022\u2022\u2022\u2022"
+
 class CheckerTicWidget : GlanceAppWidget() {
 
     companion object {
@@ -94,14 +97,33 @@ class CheckerTicWidget : GlanceAppWidget() {
                 runBlocking { taskRepo.ensureRecurrenceReset(activeCategoryId) }
             }
 
-            // Fetch incomplete tasks for the active category so completed tasks disappear
-            val tasks = if (currentTab == "tasks" && activeCategoryId > 0L) {
+            // Fetch incomplete tasks for the active category so completed tasks disappear.
+            //
+            // A locked category's task titles are stored as ciphertext and the
+            // vault key requires authentication the widget has no way to
+            // prompt for, so they are masked here rather than rendered raw.
+            // Counting them still works, which is what keeps the widget
+            // honest about there being something there.
+            val activeCategory = categories.firstOrNull { it.id == activeCategoryId }
+            val rawTasks = if (currentTab == "tasks" && activeCategoryId > 0L) {
                 runBlocking { db.taskDao().getIncompleteTasksForCategory(activeCategoryId).first() }
             } else emptyList()
+            val tasks = if (activeCategory?.locked == true) {
+                rawTasks.map { it.copy(title = LOCKED_MASK) }
+            } else {
+                rawTasks
+            }
 
-            // Fetch notes
+            // Fetch notes. Locked notes are masked for the same reason.
             val notes = if (currentTab == "notes") {
                 runBlocking { db.noteDao().getAll().first() }
+                    .map { note ->
+                        if (note.encrypted) {
+                            note.copy(title = LOCKED_MASK, content = "")
+                        } else {
+                            note
+                        }
+                    }
             } else emptyList()
 
             GlanceTheme {
@@ -373,7 +395,7 @@ private fun TasksWidgetContent(
 
                     val baseModifier = GlanceModifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(44.dp)
                         .background(ImageProvider(rowBackground))
 
                     val rowModifier = if (!isCompleting) {
@@ -387,16 +409,16 @@ private fun TasksWidgetContent(
                     Box(
                         modifier = GlanceModifier
                             .fillMaxWidth()
-                            .padding(bottom = 10.dp)
+                            .padding(bottom = 8.dp)
                     ) {
                         Row(
                             modifier = rowModifier,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Left vertical ticker bar (20dp with 14dp rounded corners)
+                            // Left vertical ticker bar (14dp with rounded corners)
                             Box(
                                 modifier = GlanceModifier
-                                    .width(20.dp)
+                                    .width(14.dp)
                                     .fillMaxHeight()
                                     .background(ImageProvider(leftTickerRes))
                             ) {}
@@ -406,7 +428,7 @@ private fun TasksWidgetContent(
                                 modifier = GlanceModifier
                                     .defaultWeight()
                                     .fillMaxHeight()
-                                    .padding(horizontal = 14.dp),
+                                    .padding(horizontal = 12.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Text(
@@ -421,10 +443,10 @@ private fun TasksWidgetContent(
                                 )
                             }
 
-                            // Right vertical ticker bar (20dp with 14dp rounded corners)
+                            // Right vertical ticker bar (14dp with rounded corners)
                             Box(
                                 modifier = GlanceModifier
-                                    .width(20.dp)
+                                    .width(14.dp)
                                     .fillMaxHeight()
                                     .background(ImageProvider(rightTickerRes))
                             ) {}

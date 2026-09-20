@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">Flip</string>
     <string name="widget_description">View and manage tasks and notes directly from your home screen.</string>
+    <string name="reminder_channel_task">Task reminders</string>
+    <string name="reminder_channel_category">List reminders</string>
 </resources>

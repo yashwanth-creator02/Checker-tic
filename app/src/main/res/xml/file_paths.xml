@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Only the export scratch directory is shared. Deliberately narrow: the
+    voice-note and background directories are never exposed through the
+    provider, so a locked note's encrypted audio cannot be handed to another
+    app by a malformed intent.
+-->
+<paths>
+    <cache-path
+        name="exports"
+        path="exports/" />
+</paths>
