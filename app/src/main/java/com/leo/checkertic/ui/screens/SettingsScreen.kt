@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.leo.checkertic.BuildConfig
 import com.leo.checkertic.R
 import com.leo.checkertic.core.backup.BackupManager
 import com.leo.checkertic.core.crypto.BiometricGate
@@ -476,7 +477,7 @@ fun SettingsScreen(
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Flip v1.2.0",
+                                text = "Flip v${BuildConfig.VERSION_NAME}",
                                 color = colors.textPrimary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
