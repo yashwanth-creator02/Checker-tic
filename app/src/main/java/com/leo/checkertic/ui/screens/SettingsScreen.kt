@@ -1,6 +1,8 @@
 package com.leo.checkertic.ui.screens
 
 import android.Manifest
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -64,10 +66,12 @@ import com.leo.checkertic.core.crypto.Vault
 import com.leo.checkertic.reminders.Notifications
 import com.leo.checkertic.reminders.ReminderScheduler
 import com.leo.checkertic.ui.components.SectionCard
+import com.leo.checkertic.ui.components.WidgetPreview
 import com.leo.checkertic.ui.theme.AppTheme
 import com.leo.checkertic.ui.theme.GlassTopBoundary
 import com.leo.checkertic.ui.theme.ThemeMode
 import com.leo.checkertic.ui.viewmodel.TasksViewModel
+import com.leo.checkertic.widget.CheckerTicWidgetReceiver
 import com.leo.checkertic.work.WidgetRefreshWorker
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -89,12 +93,18 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val tasks by viewModel.allTasks.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     val vaultUnlocked by Vault.unlocked.collectAsState()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val colors = AppTheme.colors
     val spacing = AppTheme.spacing
+
+    val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
+    val canPinWidget = remember {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && appWidgetManager.isRequestPinAppWidgetSupported
+    }
 
     val prefs = remember { context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE) }
     var nightlyRefresh by remember { mutableStateOf(prefs.getBoolean(KEY_NIGHTLY_REFRESH, true)) }
@@ -318,19 +328,87 @@ fun SettingsScreen(
 
             // -- Widget ----------------------------------------------------
             item(key = "widget") {
-                SectionCard(title = "Nightly widget refresh") {
+                SectionCard(
+                    title = "Home Screen Widget",
+                    trailing = {
+                        Text(
+                            text = "PREVIEW",
+                            color = colors.accent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                ) {
+                    Text(
+                        text = "Flip includes an interactive home screen widget. You can check off " +
+                            "tasks, increment counters with the ticker controls, flip to notes, " +
+                            "and quickly add items without opening the app.",
+                        color = colors.textSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+
+                    Spacer(Modifier.height(spacing.md))
+
+                    // Authentic widget visual preview
+                    WidgetPreview(tasks = tasks, categories = categories)
+
+                    Spacer(Modifier.height(spacing.md))
+
+                    if (canPinWidget) {
+                        OutlinedButton(
+                            onClick = {
+                                val provider = ComponentName(context, CheckerTicWidgetReceiver::class.java)
+                                val success = runCatching {
+                                    appWidgetManager.requestPinAppWidget(provider, null, null)
+                                }.getOrDefault(false)
+                                if (!success) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Please touch and hold your home screen to add the Flip widget.",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Add widget to Home Screen")
+                        }
+                        Spacer(Modifier.height(spacing.xs))
+                    }
+
+                    Text(
+                        text = "To add manually: Touch and hold an empty space on your home screen, " +
+                            "select Widgets, locate Flip, and drag it to your screen.",
+                        color = colors.textMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+
+                    Spacer(Modifier.height(spacing.lg))
+
+                    // Nightly widget refresh toggle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Refreshes the widget overnight so recurrence resets show " +
-                                "on your home screen without opening the app.",
-                            color = colors.textSecondary,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Nightly widget refresh",
+                                color = colors.textPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "Refreshes the widget overnight so recurrence resets show " +
+                                    "on your home screen without opening the app.",
+                                color = colors.textSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
+                            )
+                        }
                         Spacer(Modifier.width(spacing.md))
                         Switch(
                             checked = nightlyRefresh,
