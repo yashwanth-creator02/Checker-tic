@@ -24,7 +24,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -172,17 +171,13 @@ fun AnalyticsScreen(
                     infoText = "Daily task completion activity. Darker copper squares indicate higher task volume. Tap any square to view the date and count.",
                     trailing = { HeatLegend() }
                 ) {
-                    val calendarScrollState = rememberScrollState()
-                    LaunchedEffect(state.calendar) {
-                        calendarScrollState.scrollTo(calendarScrollState.maxValue)
-                    }
-                    Box(modifier = Modifier.horizontalScroll(calendarScrollState)) {
-                        CalendarHeatmap(
-                            series = state.calendar,
-                            weekdayAligned = true,
-                            onDaySelected = { _, _ -> }
-                        )
-                    }
+                    CalendarHeatmap(
+                        modifier = Modifier.fillMaxWidth(),
+                        series = state.calendar,
+                        weekdayAligned = true,
+                        scrollToEnd = true,
+                        onDaySelected = { _, _ -> }
+                    )
                 }
             }
 

@@ -51,7 +51,12 @@ import com.leo.checkertic.data.entity.CategoryEntity
 import com.leo.checkertic.data.entity.NoteEntity
 import com.leo.checkertic.data.entity.TaskEntity
 import com.leo.checkertic.data.repository.TaskRepository
+import com.leo.checkertic.ui.theme.CopperContainer
+import com.leo.checkertic.ui.theme.RadiantCopperText
 import com.leo.checkertic.ui.theme.SatinCopper
+import com.leo.checkertic.ui.theme.TextCompletedDark
+import com.leo.checkertic.ui.theme.TextPrimaryDark
+import com.leo.checkertic.ui.theme.TextSecondaryDark
 import com.leo.checkertic.ui.trampoline.NotePopupActivity
 import com.leo.checkertic.ui.trampoline.QuickAddActivity
 import kotlinx.coroutines.flow.first
@@ -192,7 +197,7 @@ private fun WidgetContent(
                         provider = ImageProvider(R.drawable.ic_widget_tasks),
                         contentDescription = "Tasks",
                         colorFilter = ColorFilter.tint(
-                            ColorProvider(if (isTasksActive) SatinCopper else Color(0xFF71717A))
+                            ColorProvider(if (isTasksActive) RadiantCopperText else TextSecondaryDark)
                         ),
                         modifier = GlanceModifier.size(20.dp)
                     )
@@ -218,7 +223,7 @@ private fun WidgetContent(
                         provider = ImageProvider(R.drawable.ic_widget_notes),
                         contentDescription = "Notes",
                         colorFilter = ColorFilter.tint(
-                            ColorProvider(if (isNotesActive) SatinCopper else Color(0xFF71717A))
+                            ColorProvider(if (isNotesActive) RadiantCopperText else TextSecondaryDark)
                         ),
                         modifier = GlanceModifier.size(20.dp)
                     )
@@ -242,7 +247,7 @@ private fun WidgetContent(
                     Image(
                         provider = ImageProvider(R.drawable.ic_open_app),
                         contentDescription = "Open App",
-                        colorFilter = ColorFilter.tint(ColorProvider(Color(0xFF71717A))),
+                        colorFilter = ColorFilter.tint(ColorProvider(TextSecondaryDark)),
                         modifier = GlanceModifier.size(18.dp)
                     )
                 }
@@ -294,7 +299,7 @@ private fun WidgetContent(
                     Image(
                         provider = ImageProvider(R.drawable.ic_widget_add),
                         contentDescription = "Add",
-                        colorFilter = ColorFilter.tint(ColorProvider(SatinCopper)),
+                        colorFilter = ColorFilter.tint(ColorProvider(RadiantCopperText)),
                         modifier = GlanceModifier.size(20.dp)
                     )
                 }
@@ -341,7 +346,7 @@ private fun TasksWidgetContent(
                             text = category.name,
                             style = TextStyle(
                                 color = ColorProvider(
-                                    if (isSelected) Color(0xFFBFDBFE) else Color(0xFF9CA3AF)
+                                    if (isSelected) RadiantCopperText else TextSecondaryDark
                                 ),
                                 fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                                 fontSize = 13.sp
@@ -363,7 +368,7 @@ private fun TasksWidgetContent(
                 Text(
                     text = if (categories.isEmpty()) "Add a category in the app" else "All tasks done",
                     style = TextStyle(
-                        color = ColorProvider(Color(0xFF71717A)),
+                        color = ColorProvider(TextSecondaryDark),
                         fontSize = 13.sp
                     )
                 )
@@ -386,7 +391,7 @@ private fun TasksWidgetContent(
                     val textColor = when (phase) {
                         1 -> Color(0xFF86EFAC)
                         2 -> Color(0x3386EFAC)
-                        else -> if (task.completed) Color(0xFF6B7280) else Color(0xFFF3F4F6)
+                        else -> if (task.completed) TextCompletedDark else TextPrimaryDark
                     }
                     val rowBackground = when (phase) {
                         1 -> R.drawable.bg_task_row_blinking
@@ -476,7 +481,7 @@ private fun NotesWidgetContent(notes: List<NoteEntity>) {
             Text(
                 text = "No notes yet",
                 style = TextStyle(
-                    color = ColorProvider(Color(0xFF71717A)),
+                    color = ColorProvider(TextSecondaryDark),
                     fontSize = 13.sp
                 )
             )
@@ -546,7 +551,7 @@ private fun NoteWidgetCard(
                 text = note.title,
                 maxLines = 1,
                 style = TextStyle(
-                    color = ColorProvider(Color.White),
+                    color = ColorProvider(TextPrimaryDark),
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
@@ -558,7 +563,7 @@ private fun NoteWidgetCard(
                 text = note.content,
                 maxLines = 2,
                 style = TextStyle(
-                    color = ColorProvider(Color(0xFF9CA3AF)),
+                    color = ColorProvider(TextSecondaryDark),
                     fontSize = 11.sp
                 )
             )

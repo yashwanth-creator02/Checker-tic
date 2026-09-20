@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -27,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.checkertic.analytics.CategoryAnalytics
@@ -122,44 +120,55 @@ fun CategoryAnalyticsBlock(
             Column {
                 SectionCard(
                     title = "Task activity",
-                    infoText = "Rolling completion activity and calendar view specifically for tasks in this category."
+                    infoText = "Rolling completion activity and calendar view specifically for tasks in this category.",
+                    trailing = {
+                        ModeToggle(mode = mode, onSelect = { mode = it })
+                    }
                 ) {
-                    ModeToggle(mode = mode, onSelect = { mode = it })
-                    Spacer(Modifier.height(spacing.md))
-
                     when (mode) {
                         HeatmapMode.ROLLING -> {
-                            val rollingScrollState = rememberScrollState()
-                            LaunchedEffect(analytics.rolling) {
-                                rollingScrollState.scrollTo(rollingScrollState.maxValue)
-                            }
-                            Box(modifier = Modifier.horizontalScroll(rollingScrollState)) {
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 CalendarHeatmap(
                                     series = analytics.rolling,
                                     weekdayAligned = true,
                                     showMonthLabels = true,
+                                    scrollToEnd = true,
                                     onDaySelected = { _, _ -> }
                                 )
                             }
                         }
 
                         HeatmapMode.CALENDAR -> {
-                            MonthStepper(
-                                month = month,
-                                onStep = onStepMonth
-                            )
-                            Spacer(Modifier.height(spacing.sm))
-                            CalendarHeatmap(
-                                series = analytics.calendarMonth,
-                                weekdayAligned = true,
-                                showMonthLabels = false,
-                                onDaySelected = { _, _ -> }
-                            )
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                MonthStepper(
+                                    month = month,
+                                    onStep = onStepMonth
+                                )
+                                Spacer(Modifier.height(spacing.sm))
+                                CalendarHeatmap(
+                                    series = analytics.calendarMonth,
+                                    weekdayAligned = true,
+                                    showMonthLabels = false,
+                                    scrollToEnd = false,
+                                    onDaySelected = { _, _ -> }
+                                )
+                            }
                         }
                     }
 
                     Spacer(Modifier.height(spacing.md))
-                    HeatLegend()
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        HeatLegend()
+                    }
                 }
 
                 Spacer(Modifier.height(spacing.md))
@@ -202,15 +211,18 @@ fun CategoryAnalyticsBlock(
 @Composable
 private fun ModeToggle(mode: HeatmapMode, onSelect: (HeatmapMode) -> Unit) {
     val colors = AppTheme.colors
-    Row(horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         HeatmapMode.entries.forEach { option ->
             val selected = option == mode
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(AppTheme.radius.sm))
+                    .clip(RoundedCornerShape(AppTheme.radius.xs))
                     .background(if (selected) colors.accentContainer else colors.surfaceSunken)
                     .clickable { onSelect(option) }
-                    .padding(horizontal = AppTheme.spacing.md, vertical = AppTheme.spacing.xs + 2.dp)
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = option.label,
@@ -230,6 +242,7 @@ private fun MonthStepper(month: YearMonth, onStep: (Long) -> Unit) {
 
     Row(
         modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = { onStep(-1L) }, modifier = Modifier.size(28.dp)) {
@@ -240,14 +253,15 @@ private fun MonthStepper(month: YearMonth, onStep: (Long) -> Unit) {
                 modifier = Modifier.size(18.dp)
             )
         }
+        Spacer(Modifier.width(AppTheme.spacing.sm))
         Text(
             text = month.format(monthTitleFormatter),
             color = colors.textPrimary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
+        Spacer(Modifier.width(AppTheme.spacing.sm))
         IconButton(
             onClick = { onStep(1L) },
             enabled = !isCurrentMonth,

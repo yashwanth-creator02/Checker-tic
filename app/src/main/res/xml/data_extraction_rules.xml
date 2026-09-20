@@ -13,7 +13,6 @@
         <include domain="database" path="." />
         <include domain="file" path="backgrounds/" />
         <include domain="sharedpref" path="checker_tic_prefs.xml" />
-        <exclude domain="file" path="voice/" />
     </cloud-backup>
     <device-transfer>
         <include domain="database" path="." />

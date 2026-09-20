@@ -1,7 +1,9 @@
 package com.leo.checkertic.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +31,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.PlatformTextStyle
@@ -87,6 +93,9 @@ private fun rampColor(ramp: List<Color>, count: Int, intensity: Float): Color {
  * GitHub-style contribution grid: weeks run left to right, days top to
  * bottom within a column.
  *
+ * The weekday column (M, T, W, T, F, S, S) remains pinned on the left while the
+ * month labels and grid cells scroll horizontally.
+ *
  * @param weekdayAligned when true the first column is padded so rows line up
  *   with real weekdays — what the calendar-month mode needs. When false the
  *   grid simply starts at [series]`.startDate`, which is what a rolling
@@ -100,6 +109,8 @@ fun CalendarHeatmap(
     cellSize: Dp = AppTheme.sizes.heatCell,
     cellGap: Dp = AppTheme.sizes.heatCellGap,
     showMonthLabels: Boolean = true,
+    scrollState: ScrollState? = null,
+    scrollToEnd: Boolean = true,
     onDaySelected: ((LocalDate, Int) -> Unit)? = null
 ) {
     val colors = AppTheme.colors
@@ -125,90 +136,128 @@ fun CalendarHeatmap(
     val radiusPx = with(density) { 2.dp.toPx() }
     val gridHeight = cellSize * 7 + cellGap * 6
     val gridWidth = cellSize * columns + cellGap * (columns - 1).coerceAtLeast(0)
-    val gutterWidth = 20.dp
+    val gutterWidth = 14.dp
+    val gutterSpacer = 6.dp
 
-    Column(modifier = modifier.padding(end = 24.dp)) {
-        if (showMonthLabels) {
-            MonthLabelRow(
-                series = series,
-                leadingBlanks = leadingBlanks,
-                columns = columns,
-                cellSize = cellSize,
-                cellGap = cellGap,
-                startPadding = gutterWidth + AppTheme.spacing.xs
-            )
-            Spacer(Modifier.height(AppTheme.spacing.xs))
+    val internalScrollState = rememberScrollState()
+    val effectiveScrollState = scrollState ?: internalScrollState
+
+    if (scrollToEnd) {
+        LaunchedEffect(series, effectiveScrollState.maxValue) {
+            if (effectiveScrollState.maxValue > 0) {
+                effectiveScrollState.scrollTo(effectiveScrollState.maxValue)
+            }
         }
+    }
 
-        Row(verticalAlignment = Alignment.Top) {
-            WeekdayGutter(cellSize = cellSize, cellGap = cellGap, gutterWidth = gutterWidth)
-            Spacer(Modifier.width(AppTheme.spacing.xs))
+    Column(
+        modifier = modifier,
+        horizontalAlignment = if (columns <= 6) Alignment.CenterHorizontally else Alignment.Start
+    ) {
+        Row(
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.wrapContentWidth()
+        ) {
+            // Pinned weekday gutter (stays fixed during horizontal scrolling)
+            Column {
+                if (showMonthLabels) {
+                    Spacer(Modifier.height(18.dp + AppTheme.spacing.xs))
+                }
+                WeekdayGutter(
+                    cellSize = cellSize,
+                    cellGap = cellGap,
+                    gutterWidth = gutterWidth
+                )
+            }
 
-            Canvas(
+            Spacer(Modifier.width(gutterSpacer))
+
+            // Horizontally scrolling grid + month labels
+            Box(
                 modifier = Modifier
-                    .width(gridWidth)
-                    .height(gridHeight)
-                    .then(
-                        if (onDaySelected == null) Modifier else Modifier.pointerInput(series) {
-                            detectTapGestures { offset ->
-                                val column = floor(offset.x / (cellPx + gapPx)).toInt()
-                                val row = floor(offset.y / (cellPx + gapPx)).toInt()
-                                val index = column * 7 + row - leadingBlanks
-                                if (index in 0 until series.size) {
-                                    selected = index
-                                    onDaySelected(series.dateAt(index), series.counts[index])
+                    .weight(1f, fill = false)
+                    .horizontalScroll(effectiveScrollState)
+            ) {
+                Column(modifier = Modifier.padding(end = AppTheme.spacing.sm)) {
+                    if (showMonthLabels) {
+                        MonthLabelRow(
+                            series = series,
+                            leadingBlanks = leadingBlanks,
+                            columns = columns,
+                            cellSize = cellSize,
+                            cellGap = cellGap,
+                            startPadding = 0.dp
+                        )
+                        Spacer(Modifier.height(AppTheme.spacing.xs))
+                    }
+
+                    Canvas(
+                        modifier = Modifier
+                            .width(gridWidth)
+                            .height(gridHeight)
+                            .then(
+                                if (onDaySelected == null) Modifier else Modifier.pointerInput(series) {
+                                    detectTapGestures { offset ->
+                                        val column = floor(offset.x / (cellPx + gapPx)).toInt()
+                                        val row = floor(offset.y / (cellPx + gapPx)).toInt()
+                                        val index = column * 7 + row - leadingBlanks
+                                        if (index in 0 until series.size) {
+                                            selected = index
+                                            onDaySelected(series.dateAt(index), series.counts[index])
+                                        }
+                                    }
                                 }
+                            )
+                    ) {
+                        // One pass, no allocation inside the loop. `ramp` and the
+                        // pixel metrics are all hoisted above it.
+                        val ramp = colors.heatRamp
+                        for (index in 0 until series.size) {
+                            val cellIndex = index + leadingBlanks
+                            val column = cellIndex / 7
+                            val row = cellIndex % 7
+                            val count = series.counts[index]
+                            val color = rampColor(ramp, count, series.intensityAt(index))
+                            val topLeft = Offset(column * (cellPx + gapPx), row * (cellPx + gapPx))
+                            val cellSizeObj = Size(cellPx, cellPx)
+                            val cornerRadiusObj = CornerRadius(radiusPx, radiusPx)
+
+                            drawRoundRect(
+                                color = color,
+                                topLeft = topLeft,
+                                size = cellSizeObj,
+                                cornerRadius = cornerRadiusObj
+                            )
+
+                            // Subtle hairline frame around empty cells for clean structure
+                            if (count <= 0) {
+                                drawRoundRect(
+                                    color = colors.hairline.copy(alpha = 0.4f),
+                                    topLeft = topLeft,
+                                    size = cellSizeObj,
+                                    cornerRadius = cornerRadiusObj,
+                                    style = Stroke(
+                                        width = with(density) { 0.6.dp.toPx() }
+                                    )
+                                )
                             }
                         }
-                    )
-            ) {
-                // One pass, no allocation inside the loop. `ramp` and the
-                // pixel metrics are all hoisted above it.
-                val ramp = colors.heatRamp
-                for (index in 0 until series.size) {
-                    val cellIndex = index + leadingBlanks
-                    val column = cellIndex / 7
-                    val row = cellIndex % 7
-                    val count = series.counts[index]
-                    val color = rampColor(ramp, count, series.intensityAt(index))
-                    val topLeft = Offset(column * (cellPx + gapPx), row * (cellPx + gapPx))
-                    val cellSizeObj = Size(cellPx, cellPx)
-                    val cornerRadiusObj = CornerRadius(radiusPx, radiusPx)
-
-                    drawRoundRect(
-                        color = color,
-                        topLeft = topLeft,
-                        size = cellSizeObj,
-                        cornerRadius = cornerRadiusObj
-                    )
-
-                    // Subtle hairline frame around empty cells for clean structure
-                    if (count <= 0) {
-                        drawRoundRect(
-                            color = colors.hairline.copy(alpha = 0.4f),
-                            topLeft = topLeft,
-                            size = cellSizeObj,
-                            cornerRadius = cornerRadiusObj,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                width = with(density) { 0.6.dp.toPx() }
+                        selected?.let { index ->
+                            val cellIndex = index + leadingBlanks
+                            drawRoundRect(
+                                color = colors.accent,
+                                topLeft = Offset(
+                                    (cellIndex / 7) * (cellPx + gapPx),
+                                    (cellIndex % 7) * (cellPx + gapPx)
+                                ),
+                                size = Size(cellPx, cellPx),
+                                cornerRadius = CornerRadius(radiusPx, radiusPx),
+                                style = Stroke(
+                                    width = with(density) { 1.5.dp.toPx() }
+                                )
                             )
-                        )
+                        }
                     }
-                }
-                selected?.let { index ->
-                    val cellIndex = index + leadingBlanks
-                    drawRoundRect(
-                        color = colors.accent,
-                        topLeft = Offset(
-                            (cellIndex / 7) * (cellPx + gapPx),
-                            (cellIndex % 7) * (cellPx + gapPx)
-                        ),
-                        size = Size(cellPx, cellPx),
-                        cornerRadius = CornerRadius(radiusPx, radiusPx),
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = with(density) { 1.5.dp.toPx() }
-                        )
-                    )
                 }
             }
         }
@@ -230,34 +279,32 @@ fun CalendarHeatmap(
 private fun WeekdayGutter(
     cellSize: Dp,
     cellGap: Dp,
-    gutterWidth: Dp = 20.dp
+    gutterWidth: Dp = 14.dp
 ) {
     val colors = AppTheme.colors
+    // Mark every single row with weekday initial: Mon, Tue, Wed, Thu, Fri, Sat, Sun
+    val dayLabels = listOf("M", "T", "W", "T", "F", "S", "S")
     Column(verticalArrangement = Arrangement.spacedBy(cellGap)) {
-        // Every other label only. Seven stacked 9sp labels at this cell size
-        // is illegible noise; Mon/Wed/Fri is the convention for a reason.
-        listOf("M", "", "W", "", "F", "", "").forEach { label ->
+        dayLabels.forEach { label ->
             Box(
                 modifier = Modifier
                     .height(cellSize)
                     .width(gutterWidth),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                if (label.isNotEmpty()) {
-                    Text(
-                        text = label,
-                        color = colors.textSecondary,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Medium,
-                        lineHeight = 9.sp,
-                        style = TextStyle(
-                            platformStyle = PlatformTextStyle(
-                                includeFontPadding = false
-                            )
-                        ),
-                        maxLines = 1
-                    )
-                }
+                Text(
+                    text = label,
+                    color = colors.textSecondary,
+                    fontSize = 8.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 9.sp,
+                    style = TextStyle(
+                        platformStyle = PlatformTextStyle(
+                            includeFontPadding = false
+                        )
+                    ),
+                    maxLines = 1
+                )
             }
         }
     }
