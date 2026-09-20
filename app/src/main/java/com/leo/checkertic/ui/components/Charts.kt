@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +19,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +31,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import com.leo.checkertic.analytics.CategoryStat
 import com.leo.checkertic.analytics.DaySeries
 import com.leo.checkertic.ui.theme.AppTheme
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 /**
  * ============================================================================
@@ -56,6 +63,8 @@ import com.leo.checkertic.ui.theme.AppTheme
  * the layout tree of a scrolling screen.
  */
 
+private val trendDateFormatter = DateTimeFormatter.ofPattern("EEE, d MMM")
+
 /**
  * Completion trend as bars.
  *
@@ -73,15 +82,13 @@ fun TrendChart(
 ) {
     val colors = AppTheme.colors
     val density = LocalDensity.current
+    var selectedIndex by remember(series) { mutableStateOf<Int?>(null) }
 
     if (series.size == 0 || series.max == 0) {
         EmptyChartHint(text = "Nothing to chart yet", modifier = modifier)
         return
     }
 
-    // A single animated scalar drives the whole draw. Animating per-bar would
-    // mean N animations running N recompositions; this is one value change
-    // and one redraw of an otherwise static node.
     val progress by animateFloatAsState(
         targetValue = 1f,
         animationSpec = AppTheme.motion.normalSpec(),
@@ -89,39 +96,112 @@ fun TrendChart(
     )
     val grow = if (animate) progress else 1f
 
-    Canvas(modifier = modifier.fillMaxWidth().height(height)) {
-        val count = series.size
-        val gapPx = with(density) { 1.5.dp.toPx() }
-        val barWidth = ((size.width - gapPx * (count - 1)) / count).coerceAtLeast(1f)
-        val radiusPx = with(density) { 1.5.dp.toPx() }
-        val baseline = size.height
+    Column(modifier = modifier.fillMaxWidth()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height)
+                .pointerInput(series) {
+                    detectTapGestures { offset ->
+                        val count = series.size
+                        val gapPx = with(density) { 1.5.dp.toPx() }
+                        val barWidth = ((size.width - gapPx * (count - 1)) / count).coerceAtLeast(1f)
+                        val index = (offset.x / (barWidth + gapPx)).toInt().coerceIn(0, count - 1)
+                        selectedIndex = if (selectedIndex == index) null else index
+                    }
+                }
+        ) {
+            val count = series.size
+            val gapPx = with(density) { 1.5.dp.toPx() }
+            val barWidth = ((size.width - gapPx * (count - 1)) / count).coerceAtLeast(1f)
+            val radiusPx = with(density) { 2.dp.toPx() }
+            val baseline = size.height
 
-        for (index in 0 until count) {
-            val value = series.counts[index]
-            if (value == 0) {
-                // A hairline for empty days: without it a sparse chart reads
-                // as "no data" rather than "nothing happened that day".
-                drawRect(
-                    color = colors.surfaceSunken,
-                    topLeft = Offset(index * (barWidth + gapPx), baseline - gapPx),
-                    size = Size(barWidth, gapPx)
+            // Top peak dashed ceiling guide
+            val dashEffect = PathEffect.dashPathEffect(
+                floatArrayOf(with(density) { 4.dp.toPx() }, with(density) { 4.dp.toPx() }),
+                0f
+            )
+            drawLine(
+                color = colors.hairline,
+                start = Offset(0f, 0f),
+                end = Offset(size.width, 0f),
+                strokeWidth = with(density) { 1.dp.toPx() },
+                pathEffect = dashEffect
+            )
+
+            for (index in 0 until count) {
+                val value = series.counts[index]
+                val left = index * (barWidth + gapPx)
+                val isSelected = selectedIndex == index
+
+                if (value == 0) {
+                    drawRoundRect(
+                        color = colors.surfaceSunken,
+                        topLeft = Offset(left, baseline - with(density) { 3.dp.toPx() }),
+                        size = Size(barWidth, with(density) { 3.dp.toPx() }),
+                        cornerRadius = CornerRadius(with(density) { 1.dp.toPx() }, with(density) { 1.dp.toPx() })
+                    )
+                    continue
+                }
+
+                val barHeight = (value.toFloat() / series.max) * (size.height - with(density) { 4.dp.toPx() }) * grow
+                val top = baseline - barHeight
+
+                val brush = Brush.verticalGradient(
+                    colors = listOf(
+                        barColor,
+                        barColor.copy(alpha = if (isSelected) 1f else 0.72f)
+                    ),
+                    startY = top,
+                    endY = baseline
                 )
-                continue
+
+                drawRoundRect(
+                    brush = brush,
+                    topLeft = Offset(left, top),
+                    size = Size(barWidth, barHeight),
+                    cornerRadius = CornerRadius(radiusPx, radiusPx)
+                )
+
+                if (isSelected) {
+                    drawRoundRect(
+                        color = colors.textPrimary,
+                        topLeft = Offset(left - 0.5f, top - 0.5f),
+                        size = Size(barWidth + 1f, barHeight + 1f),
+                        cornerRadius = CornerRadius(radiusPx, radiusPx),
+                        style = Stroke(width = with(density) { 1.dp.toPx() })
+                    )
+                }
             }
-            val barHeight = (value.toFloat() / series.max) * size.height * grow
-            drawRoundRect(
-                color = barColor,
-                topLeft = Offset(index * (barWidth + gapPx), baseline - barHeight),
-                size = Size(barWidth, barHeight),
-                cornerRadius = CornerRadius(radiusPx, radiusPx)
+
+            // Baseline anchor
+            drawLine(
+                color = colors.hairline,
+                start = Offset(0f, baseline),
+                end = Offset(size.width, baseline),
+                strokeWidth = with(density) { 1.dp.toPx() }
+            )
+        }
+
+        selectedIndex?.let { idx ->
+            Spacer(Modifier.height(AppTheme.spacing.xs))
+            val dateStr = series.dateAt(idx).format(trendDateFormatter)
+            val c = series.counts[idx]
+            val label = if (c == 1) "1 completion" else "$c completions"
+            Text(
+                text = "$dateStr · $label",
+                color = colors.textSecondary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
             )
         }
     }
 }
 
 /**
- * A smoothed line variant, used for the notes activity trend where the point
- * is the shape of the curve rather than individual days.
+ * A smoothed spline curve variant, used for the notes activity trend where the
+ * point is the shape of the curve rather than individual days.
  */
 @Composable
 fun SparklineChart(
@@ -139,35 +219,87 @@ fun SparklineChart(
     }
 
     Canvas(modifier = modifier.fillMaxWidth().height(height)) {
+        val topPaddingPx = with(density) { 8.dp.toPx() }
+        val usableHeight = size.height - topPaddingPx
         val step = size.width / (series.size - 1)
-        val strokePx = with(density) { 1.5.dp.toPx() }
+        val strokePx = with(density) { 2.dp.toPx() }
 
-        // Paths are built once per draw and reused for both the fill and the
-        // stroke, rather than built twice.
-        val line = Path()
-        val fill = Path()
-        for (index in 0 until series.size) {
-            val x = index * step
-            val y = size.height - (series.counts[index].toFloat() / series.max) * size.height
-            if (index == 0) {
-                line.moveTo(x, y)
-                fill.moveTo(x, size.height)
-                fill.lineTo(x, y)
-            } else {
-                line.lineTo(x, y)
-                fill.lineTo(x, y)
+        // Dashed ceiling line
+        val dashEffect = PathEffect.dashPathEffect(
+            floatArrayOf(with(density) { 4.dp.toPx() }, with(density) { 4.dp.toPx() }),
+            0f
+        )
+        drawLine(
+            color = colors.hairline,
+            start = Offset(0f, topPaddingPx),
+            end = Offset(size.width, topPaddingPx),
+            strokeWidth = with(density) { 1.dp.toPx() },
+            pathEffect = dashEffect
+        )
+
+        // Calculate smooth points
+        val points = Array(series.size) { i ->
+            val x = i * step
+            val y = topPaddingPx + usableHeight - (series.counts[i].toFloat() / series.max) * usableHeight
+            Offset(x, y)
+        }
+
+        // Smooth cubic Bézier spline
+        val linePath = Path().apply {
+            moveTo(points[0].x, points[0].y)
+            for (i in 1 until points.size) {
+                val prev = points[i - 1]
+                val curr = points[i]
+                val midX = (prev.x + curr.x) / 2f
+                cubicTo(midX, prev.y, midX, curr.y, curr.x, curr.y)
             }
         }
-        fill.lineTo(size.width, size.height)
-        fill.close()
+
+        // Gradient filled area
+        val fillPath = Path().apply {
+            addPath(linePath)
+            lineTo(size.width, size.height)
+            lineTo(0f, size.height)
+            close()
+        }
 
         drawPath(
-            path = fill,
+            path = fillPath,
             brush = Brush.verticalGradient(
-                listOf(lineColor.copy(alpha = 0.22f), Color.Transparent)
+                colors = listOf(
+                    lineColor.copy(alpha = 0.32f),
+                    lineColor.copy(alpha = 0.08f),
+                    Color.Transparent
+                ),
+                startY = topPaddingPx,
+                endY = size.height
             )
         )
-        drawPath(path = line, color = lineColor, style = Stroke(width = strokePx))
+
+        // Curve stroke
+        drawPath(path = linePath, color = lineColor, style = Stroke(width = strokePx))
+
+        // Peak point indicator dot
+        val peakIdx = series.counts.indices.maxByOrNull { series.counts[it] } ?: 0
+        val peakPoint = points[peakIdx]
+
+        drawCircle(
+            color = lineColor.copy(alpha = 0.25f),
+            radius = with(density) { 6.dp.toPx() },
+            center = peakPoint
+        )
+        drawCircle(
+            color = lineColor,
+            radius = with(density) { 3.5.dp.toPx() },
+            center = peakPoint
+        )
+        drawCircle(
+            color = colors.surface,
+            radius = with(density) { 1.8.dp.toPx() },
+            center = peakPoint
+        )
+
+        // Baseline hairline
         drawLine(
             color = colors.hairline,
             start = Offset(0f, size.height),
@@ -200,6 +332,7 @@ fun CategoryComparisonChart(
         stats.sortedByDescending { it.completionsInWindow }
     }
     val max = remember(ranked) { ranked.maxOfOrNull { it.completionsInWindow } ?: 0 }
+    val total = remember(ranked) { ranked.sumOf { it.completionsInWindow }.coerceAtLeast(1) }
 
     if (ranked.isEmpty() || max == 0) {
         EmptyChartHint(text = "No completions in this window", modifier = modifier)
@@ -212,6 +345,7 @@ fun CategoryComparisonChart(
     ) {
         ranked.forEach { stat ->
             val fraction = stat.completionsInWindow.toFloat() / max
+            val percent = ((stat.completionsInWindow.toFloat() / total) * 100).roundToInt()
             val accent = colors.accentCycle[
                 (stat.categoryId % colors.accentCycle.size).toInt().coerceAtLeast(0)
             ]
@@ -236,7 +370,7 @@ fun CategoryComparisonChart(
                     )
                     Spacer(Modifier.width(spacing.sm))
                     Text(
-                        text = stat.completionsInWindow.toString(),
+                        text = "${stat.completionsInWindow} · $percent%",
                         color = colors.textPrimary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -247,8 +381,10 @@ fun CategoryComparisonChart(
                     val radius = CornerRadius(size.height / 2f, size.height / 2f)
                     drawRoundRect(color = colors.surfaceSunken, cornerRadius = radius)
                     drawRoundRect(
-                        color = accent,
-                        size = Size(size.width * fraction, size.height),
+                        brush = Brush.horizontalGradient(
+                            listOf(accent.copy(alpha = 0.82f), accent)
+                        ),
+                        size = Size((size.width * fraction).coerceAtLeast(size.height), size.height),
                         cornerRadius = radius
                     )
                 }

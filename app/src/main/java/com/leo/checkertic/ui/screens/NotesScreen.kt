@@ -130,7 +130,7 @@ fun NotesScreen(
                                 searching = false
                                 viewModel.clearSearch()
                             },
-                            placeholder = "Search titles and content"
+                            placeholder = "Search titles & content"
                         )
                     }
                 }

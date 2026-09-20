@@ -26,6 +26,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -120,6 +122,7 @@ fun CalendarHeatmap(
     val radiusPx = with(density) { 2.dp.toPx() }
     val gridHeight = cellSize * 7 + cellGap * 6
     val gridWidth = cellSize * columns + cellGap * (columns - 1).coerceAtLeast(0)
+    val gutterWidth = 20.dp
 
     Column(modifier = modifier) {
         if (showMonthLabels) {
@@ -128,13 +131,14 @@ fun CalendarHeatmap(
                 leadingBlanks = leadingBlanks,
                 columns = columns,
                 cellSize = cellSize,
-                cellGap = cellGap
+                cellGap = cellGap,
+                startPadding = gutterWidth + AppTheme.spacing.xs
             )
             Spacer(Modifier.height(AppTheme.spacing.xs))
         }
 
         Row(verticalAlignment = Alignment.Top) {
-            WeekdayGutter(cellSize = cellSize, cellGap = cellGap)
+            WeekdayGutter(cellSize = cellSize, cellGap = cellGap, gutterWidth = gutterWidth)
             Spacer(Modifier.width(AppTheme.spacing.xs))
 
             Canvas(
@@ -162,18 +166,36 @@ fun CalendarHeatmap(
                     val cellIndex = index + leadingBlanks
                     val column = cellIndex / 7
                     val row = cellIndex % 7
-                    val color = rampColor(ramp, series.counts[index], series.intensityAt(index))
+                    val count = series.counts[index]
+                    val color = rampColor(ramp, count, series.intensityAt(index))
+                    val topLeft = Offset(column * (cellPx + gapPx), row * (cellPx + gapPx))
+                    val cellSizeObj = Size(cellPx, cellPx)
+                    val cornerRadiusObj = CornerRadius(radiusPx, radiusPx)
+
                     drawRoundRect(
                         color = color,
-                        topLeft = Offset(column * (cellPx + gapPx), row * (cellPx + gapPx)),
-                        size = Size(cellPx, cellPx),
-                        cornerRadius = CornerRadius(radiusPx, radiusPx)
+                        topLeft = topLeft,
+                        size = cellSizeObj,
+                        cornerRadius = cornerRadiusObj
                     )
+
+                    // Subtle hairline frame around empty cells for clean structure
+                    if (count <= 0) {
+                        drawRoundRect(
+                            color = colors.hairline.copy(alpha = 0.4f),
+                            topLeft = topLeft,
+                            size = cellSizeObj,
+                            cornerRadius = cornerRadiusObj,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = with(density) { 0.6.dp.toPx() }
+                            )
+                        )
+                    }
                 }
                 selected?.let { index ->
                     val cellIndex = index + leadingBlanks
                     drawRoundRect(
-                        color = colors.textPrimary,
+                        color = colors.accent,
                         topLeft = Offset(
                             (cellIndex / 7) * (cellPx + gapPx),
                             (cellIndex % 7) * (cellPx + gapPx)
@@ -202,18 +224,36 @@ fun CalendarHeatmap(
 }
 
 @Composable
-private fun WeekdayGutter(cellSize: Dp, cellGap: Dp) {
+private fun WeekdayGutter(
+    cellSize: Dp,
+    cellGap: Dp,
+    gutterWidth: Dp = 20.dp
+) {
     val colors = AppTheme.colors
     Column(verticalArrangement = Arrangement.spacedBy(cellGap)) {
         // Every other label only. Seven stacked 9sp labels at this cell size
         // is illegible noise; Mon/Wed/Fri is the convention for a reason.
         listOf("M", "", "W", "", "F", "", "").forEach { label ->
             Box(
-                modifier = Modifier.height(cellSize).width(14.dp),
+                modifier = Modifier
+                    .height(cellSize)
+                    .width(gutterWidth),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 if (label.isNotEmpty()) {
-                    Text(label, color = colors.textMuted, fontSize = 9.sp)
+                    Text(
+                        text = label,
+                        color = colors.textSecondary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 9.sp,
+                        style = TextStyle(
+                            platformStyle = PlatformTextStyle(
+                                includeFontPadding = false
+                            )
+                        ),
+                        maxLines = 1
+                    )
                 }
             }
         }
@@ -226,33 +266,69 @@ private fun MonthLabelRow(
     leadingBlanks: Int,
     columns: Int,
     cellSize: Dp,
-    cellGap: Dp
+    cellGap: Dp,
+    startPadding: Dp
 ) {
     val colors = AppTheme.colors
     // A label is placed at the first column whose week contains a 1st of the
-    // month, which is what makes the labels sit over the month they name
-    // instead of drifting a week either side.
-    val labels = remember(series, columns) {
+    // month, ensuring at least 3 columns clearance to prevent overlapping text.
+    val labels = remember(series, columns, leadingBlanks) {
         val out = arrayOfNulls<String>(columns)
         var lastMonth = -1
+        var lastPlacedCol = -4
+
         for (index in 0 until series.size) {
             val date = series.dateAt(index)
             if (date.monthValue != lastMonth) {
                 val column = (index + leadingBlanks) / 7
-                if (column < columns && out[column] == null) {
-                    out[column] = date.format(monthLabelFormatter)
+                if (column < columns) {
+                    var daysInThisMonth = 0
+                    for (forward in index until series.size) {
+                        if (series.dateAt(forward).monthValue == date.monthValue) {
+                            daysInThisMonth++
+                        } else {
+                            break
+                        }
+                    }
+                    // Only label if there are at least 14 days of this month in the series
+                    // and it is at least 3 columns apart from the previous label.
+                    if (daysInThisMonth >= 14 && (column - lastPlacedCol >= 3)) {
+                        out[column] = date.format(monthLabelFormatter)
+                        lastPlacedCol = column
+                    }
                 }
                 lastMonth = date.monthValue
             }
         }
+        // If no labels were placed due to a short window, place the starting month
+        if (lastPlacedCol == -4 && series.size > 0) {
+            val col = (leadingBlanks / 7).coerceIn(0, columns - 1)
+            out[col] = series.startDate.format(monthLabelFormatter)
+        }
         out
     }
 
-    Row(modifier = Modifier.padding(start = 18.dp)) {
+    Row(modifier = Modifier.padding(start = startPadding)) {
         for (column in 0 until columns) {
-            Box(modifier = Modifier.width(cellSize + if (column < columns - 1) cellGap else 0.dp)) {
+            Box(
+                modifier = Modifier.width(cellSize + if (column < columns - 1) cellGap else 0.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
                 labels[column]?.let {
-                    Text(it, color = colors.textMuted, fontSize = 9.sp, maxLines = 1)
+                    Text(
+                        text = it,
+                        color = colors.textSecondary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 9.sp,
+                        style = TextStyle(
+                            platformStyle = PlatformTextStyle(
+                                includeFontPadding = false
+                            )
+                        ),
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
         }
@@ -283,19 +359,32 @@ fun TimeOfDayHeatmap(
     }
 
     val dayLabels = remember { listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun") }
+    val yAxisWidth = 32.dp
 
     Column(modifier = modifier) {
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(gap),
-                modifier = Modifier.width(26.dp)
+                modifier = Modifier.width(yAxisWidth)
             ) {
                 dayLabels.forEach { label ->
                     Box(
                         modifier = Modifier.height(rowHeight),
                         contentAlignment = Alignment.CenterStart
                     ) {
-                        Text(label, color = colors.textMuted, fontSize = 9.sp)
+                        Text(
+                            text = label,
+                            color = colors.textSecondary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            lineHeight = 10.sp,
+                            style = TextStyle(
+                                platformStyle = PlatformTextStyle(
+                                    includeFontPadding = false
+                                )
+                            ),
+                            maxLines = 1
+                        )
                     }
                 }
             }
@@ -312,30 +401,63 @@ fun TimeOfDayHeatmap(
                 val radiusPx = with(density) { 2.dp.toPx() }
                 val ramp = colors.heatRamp
 
+                val peak = matrix.peak()
                 for (day in 0 until TimeOfDayMatrix.DAYS) {
                     for (hour in 0 until TimeOfDayMatrix.HOURS) {
                         val count = matrix.at(day, hour)
-                        drawRoundRect(
-                            color = rampColor(ramp, count, matrix.intensityAt(day, hour)),
-                            topLeft = Offset(
-                                hour * (cellWidth + gapPx),
-                                day * (rowPx + gapPx)
-                            ),
-                            size = Size(cellWidth, rowPx),
-                            cornerRadius = CornerRadius(radiusPx, radiusPx)
+                        val color = rampColor(ramp, count, matrix.intensityAt(day, hour))
+                        val topLeft = Offset(
+                            hour * (cellWidth + gapPx),
+                            day * (rowPx + gapPx)
                         )
+                        val cellSizeObj = Size(cellWidth, rowPx)
+                        val cornerRadiusObj = CornerRadius(radiusPx, radiusPx)
+
+                        drawRoundRect(
+                            color = color,
+                            topLeft = topLeft,
+                            size = cellSizeObj,
+                            cornerRadius = cornerRadiusObj
+                        )
+
+                        if (count <= 0) {
+                            drawRoundRect(
+                                color = colors.hairline.copy(alpha = 0.35f),
+                                topLeft = topLeft,
+                                size = cellSizeObj,
+                                cornerRadius = cornerRadiusObj,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                    width = with(density) { 0.6.dp.toPx() }
+                                )
+                            )
+                        } else if (peak != null && peak.first == day && peak.second == hour) {
+                            drawRoundRect(
+                                color = colors.accent,
+                                topLeft = topLeft,
+                                size = cellSizeObj,
+                                cornerRadius = cornerRadiusObj,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                    width = with(density) { 1.5.dp.toPx() }
+                                )
+                            )
+                        }
                     }
                 }
             }
         }
 
         Spacer(Modifier.height(AppTheme.spacing.xs))
-        Row(modifier = Modifier.padding(start = 30.dp).fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .padding(start = yAxisWidth + AppTheme.spacing.xs)
+                .fillMaxWidth()
+        ) {
             listOf("12a", "6a", "12p", "6p", "11p").forEachIndexed { index, label ->
                 Text(
                     text = label,
-                    color = colors.textMuted,
-                    fontSize = 9.sp,
+                    color = colors.textSecondary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(if (index == 4) 0.5f else 1f)
                 )
             }
@@ -369,13 +491,13 @@ fun HeatLegend(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.xs)
     ) {
-        Text("Less", color = colors.textMuted, fontSize = 9.sp)
+        Text("Less", color = colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         colors.heatRamp.forEach { color ->
             Canvas(modifier = Modifier.size(9.dp)) {
                 drawRoundRect(color = color, cornerRadius = CornerRadius(2.dp.toPx()))
             }
         }
-        Text("More", color = colors.textMuted, fontSize = 9.sp)
+        Text("More", color = colors.textSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
     }
 }
 

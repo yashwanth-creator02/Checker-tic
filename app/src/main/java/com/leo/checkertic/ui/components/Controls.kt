@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -47,9 +49,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.checkertic.data.entity.ReminderEntity
@@ -66,7 +71,6 @@ import java.time.LocalTime
  * global, "is this already on today's list" is local. One tap switches, and
  * the current state is always visible.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InlineSearchBar(
     query: String,
@@ -89,41 +93,68 @@ fun InlineSearchBar(
             .padding(horizontal = spacing.screenGutter, vertical = spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = { Text(placeholder, fontSize = 14.sp) },
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Outlined.Search,
-                    contentDescription = null,
-                    tint = colors.textSecondary,
-                    modifier = Modifier.size(AppTheme.sizes.iconMd)
-                )
-            },
-            trailingIcon = {
-                IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Close search",
-                        tint = colors.textSecondary,
-                        modifier = Modifier.size(AppTheme.sizes.iconMd)
-                    )
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = colors.surface,
-                unfocusedContainerColor = colors.surface,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            ),
-            shape = RoundedCornerShape(AppTheme.radius.md),
+        Row(
             modifier = Modifier
                 .weight(1f)
-                .focusRequester(focusRequester)
-        )
+                .height(44.dp)
+                .clip(RoundedCornerShape(AppTheme.radius.md))
+                .background(colors.surface)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Search,
+                contentDescription = null,
+                tint = colors.textSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = placeholder,
+                        color = colors.textSecondary,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        softWrap = false
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    maxLines = 1,
+                    textStyle = TextStyle(
+                        color = colors.textPrimary,
+                        fontSize = 14.sp
+                    ),
+                    cursorBrush = SolidColor(colors.accent),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onClose),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Close search",
+                    tint = colors.textSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
 
         if (scope != null && onToggleScope != null) {
             Spacer(Modifier.width(spacing.sm))
@@ -137,17 +168,19 @@ private fun ScopeChip(scope: SearchScope, onClick: () -> Unit) {
     val colors = AppTheme.colors
     Box(
         modifier = Modifier
+            .height(44.dp)
             .clip(RoundedCornerShape(AppTheme.radius.md))
             .background(colors.accentContainer)
             .clickable(onClick = onClick)
-            .padding(horizontal = AppTheme.spacing.md, vertical = AppTheme.spacing.sm),
+            .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = scope.label,
             color = colors.onAccentContainer,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            maxLines = 1
         )
     }
 }

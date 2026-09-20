@@ -83,9 +83,9 @@ private val darkColors = AppColors(
     textPrimary = TextPrimaryDark,
     textSecondary = TextSecondaryDark,
     textMuted = TextCompletedDark,
-    accent = ElectricBlue,
-    accentContainer = NavyContainer,
-    onAccentContainer = SkyBlueText,
+    accent = SatinCopper,
+    accentContainer = CopperContainer,
+    onAccentContainer = RadiantCopperText,
     success = CompletionGreen,
     warning = DotAmber,
     danger = AccentRed,
@@ -95,10 +95,10 @@ private val darkColors = AppColors(
     glassHairline = Color(0x14FFFFFF),
     heatRamp = listOf(
         Color(0xFF1E1E22),
-        Color(0xFF0E3A5C),
-        Color(0xFF14557F),
-        Color(0xFF2189C0),
-        Color(0xFF56C7F5)
+        Color(0xFF452418),
+        Color(0xFF7C3E24),
+        Color(0xFFC86D44),
+        Color(0xFFFB923C)
     ),
     accentCycle = listOf(DotBlue, DotGreen, DotAmber, DotCoral),
     isDark = true
@@ -112,9 +112,9 @@ private val lightColors = AppColors(
     textPrimary = TextPrimaryLight,
     textSecondary = TextSecondaryLight,
     textMuted = TextCompletedLight,
-    accent = LightElectricBlue,
-    accentContainer = LightNavyContainer,
-    onAccentContainer = LightSkyBlueText,
+    accent = LightSatinCopper,
+    accentContainer = LightCopperContainer,
+    onAccentContainer = LightCopperText,
     success = Color(0xFF16A34A),
     warning = Color(0xFFD97706),
     danger = AccentRed,
@@ -123,11 +123,11 @@ private val lightColors = AppColors(
     glassTint = Color(0xC7F3F4F6),
     glassHairline = Color(0x0F000000),
     heatRamp = listOf(
-        Color(0xFFE6EAF0),
-        Color(0xFFBFDCF2),
-        Color(0xFF7FBDE6),
-        Color(0xFF3B95D1),
-        Color(0xFF0369A1)
+        Color(0xFFECE6DF),
+        Color(0xFFFBD7C0),
+        Color(0xFFF8A87C),
+        Color(0xFFDD6B35),
+        Color(0xFF9A3412)
     ),
     accentCycle = listOf(DotBlue, Color(0xFF16A34A), Color(0xFFD97706), DotCoral),
     isDark = false

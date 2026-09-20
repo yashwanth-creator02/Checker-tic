@@ -51,6 +51,7 @@ import com.leo.checkertic.data.entity.CategoryEntity
 import com.leo.checkertic.data.entity.NoteEntity
 import com.leo.checkertic.data.entity.TaskEntity
 import com.leo.checkertic.data.repository.TaskRepository
+import com.leo.checkertic.ui.theme.SatinCopper
 import com.leo.checkertic.ui.trampoline.NotePopupActivity
 import com.leo.checkertic.ui.trampoline.QuickAddActivity
 import kotlinx.coroutines.flow.first
@@ -191,7 +192,7 @@ private fun WidgetContent(
                         provider = ImageProvider(R.drawable.ic_widget_tasks),
                         contentDescription = "Tasks",
                         colorFilter = ColorFilter.tint(
-                            ColorProvider(if (isTasksActive) Color(0xFF38BDF8) else Color(0xFF71717A))
+                            ColorProvider(if (isTasksActive) SatinCopper else Color(0xFF71717A))
                         ),
                         modifier = GlanceModifier.size(20.dp)
                     )
@@ -217,7 +218,7 @@ private fun WidgetContent(
                         provider = ImageProvider(R.drawable.ic_widget_notes),
                         contentDescription = "Notes",
                         colorFilter = ColorFilter.tint(
-                            ColorProvider(if (isNotesActive) Color(0xFF38BDF8) else Color(0xFF71717A))
+                            ColorProvider(if (isNotesActive) SatinCopper else Color(0xFF71717A))
                         ),
                         modifier = GlanceModifier.size(20.dp)
                     )
@@ -293,7 +294,7 @@ private fun WidgetContent(
                     Image(
                         provider = ImageProvider(R.drawable.ic_widget_add),
                         contentDescription = "Add",
-                        colorFilter = ColorFilter.tint(ColorProvider(Color(0xFF60A5FA))),
+                        colorFilter = ColorFilter.tint(ColorProvider(SatinCopper)),
                         modifier = GlanceModifier.size(20.dp)
                     )
                 }

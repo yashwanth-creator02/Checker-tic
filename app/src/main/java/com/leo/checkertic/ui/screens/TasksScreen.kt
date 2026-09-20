@@ -205,7 +205,7 @@ fun TasksScreen(
                             },
                             scope = searchScope,
                             onToggleScope = viewModel::toggleSearchScope,
-                            placeholder = "Search tasks and notes"
+                            placeholder = "Search tasks & notes"
                         )
                     }
                 }
