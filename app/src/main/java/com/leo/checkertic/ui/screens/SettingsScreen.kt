@@ -35,12 +35,16 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -102,12 +106,28 @@ fun SettingsScreen(
     val completedCount = tasks.count { it.completed }
     val activeCount = tasks.count { !it.completed }
 
-    val exactAlarms = remember { ReminderScheduler.canBeExact(context) }
-    val notificationsOn = remember { Notifications.canPost(context) }
+    var exactAlarms by remember { mutableStateOf(ReminderScheduler.canBeExact(context)) }
+    var notificationsOn by remember { mutableStateOf(Notifications.canPost(context)) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                exactAlarms = ReminderScheduler.canBeExact(context)
+                notificationsOn = Notifications.canPost(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
+    ) {
+        notificationsOn = Notifications.canPost(context)
+    }
 
     Scaffold(
         topBar = {
@@ -246,10 +266,26 @@ fun SettingsScreen(
                             fontSize = 12.sp,
                             lineHeight = 16.sp
                         )
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        Spacer(Modifier.height(spacing.xs))
+                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                OutlinedButton(onClick = {
+                                    runCatching {
+                                        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }.onFailure {
+                                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                        }
+                                        runCatching { context.startActivity(intent) }
+                                    }
+                                }) { Text("Enable notifications") }
+                            }
                             OutlinedButton(onClick = {
-                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }) { Text("Enable notifications") }
+                                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                runCatching { context.startActivity(intent) }
+                            }) { Text("Settings") }
                         }
                     }
                 }

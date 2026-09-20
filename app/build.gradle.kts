@@ -14,8 +14,8 @@ android {
         applicationId = "com.leo.checkertic"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -48,6 +48,7 @@ dependencies {
 
     // Core
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.biometric)
 
